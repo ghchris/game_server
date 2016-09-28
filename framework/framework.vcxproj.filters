@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{2f4eb212-ef79-4ca7-8fef-1f2ff0f2f780}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="db">
+      <UniqueIdentifier>{646c3dc3-3ba8-4fc5-91ab-f45330ec3aab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="datastruct">
+      <UniqueIdentifier>{bb9ec3a3-92d7-4645-a77f-7d0464a73483}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scene">
+      <UniqueIdentifier>{0c4ac026-ca82-4057-bc97-70ab68abf5ce}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\watchdog.cc">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cc" />
+    <ClCompile Include="src\agentbase.cc">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="datastruct\membercommongame.pb.cc">
+      <Filter>datastruct</Filter>
+    </ClCompile>
+    <ClCompile Include="datastruct\memberfides.pb.cc">
+      <Filter>datastruct</Filter>
+    </ClCompile>
+    <ClCompile Include="datastruct\membergame.pb.cc">
+      <Filter>datastruct</Filter>
+    </ClCompile>
+    <ClCompile Include="db\datalayer.cc">
+      <Filter>db</Filter>
+    </ClCompile>
+    <ClCompile Include="src\configmgr.cc">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="scene\scenebase.cc">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="scene\GameHall.cc">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="scene\scenemanager.cc">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="src\playeragent.cc">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\agent.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\watchdog.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\agentbase.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\define.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="datastruct\membercommongame.pb.h">
+      <Filter>datastruct</Filter>
+    </ClInclude>
+    <ClInclude Include="datastruct\memberfides.pb.h">
+      <Filter>datastruct</Filter>
+    </ClInclude>
+    <ClInclude Include="datastruct\membergame.pb.h">
+      <Filter>datastruct</Filter>
+    </ClInclude>
+    <ClInclude Include="db\datalayer.h">
+      <Filter>db</Filter>
+    </ClInclude>
+    <ClInclude Include="src\configmgr.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="scene\scene.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="scene\scenebase.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="scene\GameHall.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="scene\scenemanager.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="src\playeragent.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

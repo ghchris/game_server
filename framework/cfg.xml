@@ -1,0 +1,21 @@
+<cfg>
+	<APP SID='1300' PID='/home/caocheng/RunFast/xPoker/pdk_poker.pid'/>
+	<robot begin='801' end='820' playing_time_upper_limit='2000' />
+
+	<xGateWay host='127.0.0.1' port='9007' />
+      	<cloud host='192.168.1.114' port='5010' />
+   	<learner gold_lower_limit='4000' gift_gold='5000' gift_gold_count='5'/>
+      	<notice interval='300' room_types='S3:2,S4:2,B1:2,K3:2,K4:2' />
+        <white_list host='14,15,21,50124,50217' enable_check='1'/>	
+	<cfg path='/data/server/cfg/runfast/c_config.xml'/>
+	<system database='bullfighting_systemzh_ft' local='bullfighting_systemzh_ft' prefix='runfast' />		
+
+        <libmemcached memcached='--SERVER=192.168.1.111:11212' />
+	<redis host='192.168.1.111' port='6380' />
+	<DB host ='192.168.1.111' port='3306' passwd='123' db='poker' user='bl' factor='0'/>
+
+
+	<Proxy host='127.0.0.1' port='6099' />
+
+</cfg>
+
