@@ -1,5 +1,5 @@
 <cfg>
-	<APP SID='1300' PID='/home/caocheng/RunFast/xPoker/pdk_poker.pid'/>
+	<APP SID='1301' PID='/home/caocheng/new_framework/framework/framework.pid'/>
 	<robot begin='801' end='820' playing_time_upper_limit='2000' />
 
 	<xGateWay host='127.0.0.1' port='9007' />

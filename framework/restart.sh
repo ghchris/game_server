@@ -1,9 +1,10 @@
 #!/bin/bash
 
-bin='pdk_poker'
+bin='framework'
 
+ulimit -c unlimited
 
-work_path='/home/caocheng/RunFast/xPoker'
+work_path='/home/caocheng/new_framework/framework'
 bin_pid=`cat ${work_path}/${bin}.pid 2>/dev/null | awk -F' ' '{ print $2}'`
 
 if test -n "${bin_pid}"; then
@@ -24,7 +25,7 @@ ls ./core* 2>/dev/null | xargs -r rm -fr
 
 ls ./nohup.out 2>/dev/null | xargs -r rm -fr
 
-nohup ${work_path}/${bin} --log_dir=${work_path} --stderrthreshold=3 --cfg=${work_path}/cfg.xml & 
+nohup ${work_path}/${bin} --log_dir=${work_path} --logbufsecs=0 --logbuflevel=-1 --stderrthreshold=3 --cfg=${work_path}/cfg.xml &
 
 
 

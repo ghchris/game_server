@@ -1,6 +1,6 @@
 
 #set the final compile target
-TARGET = pdk_poker
+TARGET = framework
 
 PREFIX_BIN =
 
