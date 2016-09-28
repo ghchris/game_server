@@ -1,5 +1,5 @@
-#ifndef FRAMEWORK_SRC_SCENEBASE_H_
-#define FRAMEWORK_SRC_SCENEBASE_H_
+#ifndef FRAMEWORK_SCENE_SCENEBASE_H_
+#define FRAMEWORK_SCENE_SCENEBASE_H_
 
 #include "scene.h"
 #include <memory>
@@ -25,4 +25,4 @@ private:
     std::unique_ptr< SceneBaseImpl > pImpl_;
 };
 
-#endif
+#endif //FRAMEWORK_SCENE_SCENEBASE_H_

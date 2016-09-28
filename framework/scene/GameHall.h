@@ -1,5 +1,5 @@
-#ifndef FRAMEWORK_SRC_GAMEHALL_H_
-#define FRAMEWORK_SRC_GAMEHALL_H_
+#ifndef FRAMEWORK_SCENE_GAMEHALL_H_
+#define FRAMEWORK_SCENE_GAMEHALL_H_
 
 #include "scenebase.h"
 #include <memory>
@@ -16,4 +16,4 @@ private:
     std::unique_ptr< GameHallImpl > pImpl_;
 };
 
-#endif
+#endif //FRAMEWORK_SCENE_GAMEHALL_H_

@@ -1,5 +1,5 @@
-#ifndef FRAMEWORK_SRC_SCENE_H_
-#define FRAMEWORK_SRC_SCENE_H_
+#ifndef FRAMEWORK_SCENE_SCENE_H_
+#define FRAMEWORK_SCENE_SCENE_H_
 
 #include "define.h"
 #include <map>
@@ -21,4 +21,4 @@ public:
     virtual std::int32_t Leave(std::shared_ptr<Agent > player) = 0;
 };
 
-#endif
+#endif //FRAMEWORK_SCENE_SCENE_H_

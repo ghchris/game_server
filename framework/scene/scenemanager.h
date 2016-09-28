@@ -1,5 +1,5 @@
-#ifndef FRAMEWORK_SRC_SCENEMANAGER_H_
-#define FRAMEWORK_SRC_SCENEMANAGER_H_
+#ifndef FRAMEWORK_SCENE_SCENEMANAGER_H_
+#define FRAMEWORK_SCENE_SCENEMANAGER_H_
 
 #include "scenebase.h"
 #include <memory>
@@ -19,4 +19,4 @@ private:
     std::unique_ptr< SceneManagerImpl > pImpl_;
 };
 
-#endif
+#endif //FRAMEWORK_SCENE_SCENEMANAGER_H_
