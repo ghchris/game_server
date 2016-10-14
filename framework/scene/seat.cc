@@ -1,4 +1,5 @@
 #include "seat.h"
+#include "seatdata.h"
 
 class SeatImpl
 {

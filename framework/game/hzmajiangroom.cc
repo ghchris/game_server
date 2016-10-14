@@ -100,8 +100,8 @@ void HzMajiangRoom::OnGameStart()
        
         package.End();
 
-        DCHECK(iter->player != nullptr);
-        iter->player->SendTo(package);
+        DCHECK(iter->player() != nullptr);
+        iter->player()->SendTo(package);
 
         iter->data()->hand_cards_ = std::make_shared<CardGroup>(cards);
     }
@@ -146,7 +146,7 @@ void HzMajiangRoomImpl::NotifyOperation(std::int32_t seatno,
 
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
     DCHECK(seat != nullptr);
-    DCHECK(seat->player != nullptr);
+    DCHECK(seat->player() != nullptr);
 
     assistx2::Stream package(SERVER_NOTIFY_OPERATE);
     package.Write(seatno);
@@ -154,12 +154,12 @@ void HzMajiangRoomImpl::NotifyOperation(std::int32_t seatno,
     for (auto iter : operate)
     {
         package.Write(static_cast<std::int32_t>(iter));
-        DLOG(INFO) << "NotifyOperation: mid:=" << seat->player->uid()
+        DLOG(INFO) << "NotifyOperation: mid:=" << seat->player()->uid()
             << ",operate:=" << iter;
     }
     package.End();
 
-    seat->player->SendTo(package);
+    seat->player()->SendTo(package);
 
     seat->data()->now_operate_ = operate;
 }
@@ -220,7 +220,7 @@ bool HzMajiangRoomImpl::CheckOperation(Seat* seat, CardLogic::OperationType oper
 
 std::vector<CardLogic::OperationType> HzMajiangRoomImpl::GetOperations(std::int32_t seatno)
 {
-
+    return std::vector<CardLogic::OperationType>();
 }
 
 void HzMajiangRoomImpl::SendErrorCode(std::shared_ptr<Agent > player,

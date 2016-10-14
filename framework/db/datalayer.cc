@@ -166,7 +166,7 @@ std::int32_t DataLayer::memberfides(uid_type mid, MemberFides& info,
         std::string value;
         if (pImpl_->memcached_client_->get(key.str(), value) == true && value.empty() == false)
         {
-            DLOG(INFO) << "mid:=" << mid << ", " << value;
+            //DLOG(INFO) << "mid:=" << mid << ", " << value;
 
             json_spirit::Value json;
             if (json_spirit::read_string(value, json) == true)
@@ -293,8 +293,8 @@ std::int32_t DataLayerImpl::JsonToMessage(json_spirit::Value & json, ::google::p
         case ::google::protobuf::FieldDescriptor::TYPE_STRING:
         {
             reflection->SetString(msg, field_descriptor, assistx2::ToString(array.at(i)));
-            DLOG(INFO) << "name:=" << field_descriptor->name() << ", str:=" << assistx2::ToString(array.at(i)) << ", index:=" << i
-                << ", " << json_spirit::write_string(json);
+            //DLOG(INFO) << "name:=" << field_descriptor->name() << ", str:=" << assistx2::ToString(array.at(i)) << ", index:=" << i
+             //   << ", " << json_spirit::write_string(json);
         }
         break;
         case ::google::protobuf::FieldDescriptor::TYPE_FIXED32:

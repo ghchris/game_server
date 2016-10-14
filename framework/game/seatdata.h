@@ -5,6 +5,7 @@
 #include <memory>
 #include "card.h"
 #include "cardlogic.h"
+#include <map>
 
 enum OperCardsType
 {
