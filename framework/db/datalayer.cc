@@ -24,13 +24,15 @@ public:
     std::int32_t JsonToMessage(json_spirit::Value & json, ::google::protobuf::Message * msg);
     void MessageToJson(::google::protobuf::Message * msg, json_spirit::Value & json);
     void DataBaseToJson(IQueryResult * result, const ::google::protobuf::Descriptor * descriptor, json_spirit::Value & json);
+    std::unique_ptr<IQueryResult> QueryUserInfo(uid_type mid,const std::string& sql);
 public:
     std::shared_ptr< Database > database_client_;
     std::shared_ptr< IMemcacheHandler > memcached_client_;
     std::string prefix_;
 };
 
-DataLayer::DataLayer(void)
+DataLayer::DataLayer(void):
+ pImpl_(new DataLayerImpl)
 {
 
 }
@@ -76,47 +78,175 @@ bool DataLayer::Init()
     return true;
 }
 
+std::int32_t DataLayer::Pay(const uid_type mid, const std::int64_t incr, std::int64_t &  amount,
+    std::int64_t& real_delta, bool bForce)
+{
+    std::stringstream key;
+    key << "TMGMCOM" << mid;
+
+    pImpl_->memcached_client_->remove(key.str());
+
+    std::unique_ptr<IQueryResult> result(pImpl_->database_client_->PQuery("CALL `%s`.`pay`(%d, %d, %s, @err, @old_gold, @new_gold); "
+        " SELECT @err, @old_gold, @new_gold;", pImpl_->prefix_.c_str(),mid, -incr, (bForce ? "TRUE" : "FALSE")));
+    if (result.get() == nullptr || result->RowCount() == 0)
+    {
+        LOG(ERROR) << "Pay, FAILED mid:=" << mid << ", " << pImpl_->database_client_->GetLastError();
+        return -1;
+    }
+
+    auto err = result->GetItemLong(0, "@err");
+    amount = result->GetItemLong(0, "@new_gold");
+    real_delta = result->GetItemLong(0, "@old_gold") - amount;
+
+    DLOG(INFO) << "Pay mid:=" << mid << ", incr:=" << incr << ", new_gold:=" << amount << ", real_delta:=" << real_delta
+        << ", bForce:=" << (bForce ? "TRUE" : "FALSE") << ", err:=" << err
+        << ", old_gold:=" << result->GetItemLong(0, "@old_gold");
+
+    return err;
+}
+
 std::int32_t DataLayer::membercommongame(uid_type mid, MemberCommonGame& info, 
     bool forcedflush )
 {
-    std::string sql_buffer;
+    std::stringstream key;
+    key << "TMGMCOM" << mid;
 
-    try
+    if (forcedflush == false)
     {
-        sql_buffer = (boost::format("SELECT  * FROM `%1%`.`membercommongame0`  WHERE `mid` = %2%;") %
-            pImpl_->prefix_ % mid).str();
-
-        DLOG(INFO) << "SQL:=" << sql_buffer;
+        std::string value;
+        if (pImpl_->memcached_client_->get(key.str(), value) == true && value.empty() == false)
+        {
+            DLOG(INFO) << "GetGameInfoFromCache mid:=" << mid << ", value:=" << value;
+            json_spirit::Value json;
+            if (json_spirit::read_string(value, json) == true)
+            {
+                pImpl_->JsonToMessage(json, &info);
+                return 0;
+            }
+        }
     }
-    catch (std::exception & e)
+
+    auto result = pImpl_->QueryUserInfo(mid, 
+        "SELECT  * FROM `%1%`.`membercommongame0`  WHERE `mid` = %2% ;");
+    if (result == nullptr)
     {
-        LOG(INFO) << "GetMemberGameFromDB, FAILED, exception:=" << e.what();
         return -1;
     }
-
-    std::unique_ptr<IQueryResult> result(pImpl_->database_client_->PQuery(sql_buffer));
-    if (result.get() == nullptr || result->RowCount() == 0)
-    {
-        LOG(ERROR) << "GetMemberGameFromDB, FAILED mid:=" << mid;
-        return -1;
-    }
-
+    
     json_spirit::Value array;
     pImpl_->DataBaseToJson(result.get(), MemberCommonGame::descriptor(), array);
 
-    return 0;
+    auto res = pImpl_->JsonToMessage(array, &info);
+    if (res == 0)
+    {
+        const std::string json_str = json_spirit::write_string(array);
+        DLOG(INFO) << "SetCommonGameInfoToCache:=" << json_str << ", mid:=" << mid;
+        if (pImpl_->memcached_client_->set(key.str(), json_str, 0) == true)
+        {
+            return 0;
+        }
+        else
+        {
+            LOG(INFO) << "SetCommonGameInfoToCache. WRITE TO CACHED FAILED mid:=" << mid;
+            return -1;
+        }
+    }
+
+    return res;
 }
 
 std::int32_t DataLayer::memberfides(uid_type mid, MemberFides& info, 
     bool forcedflush )
 {
+    std::stringstream key;
+    key << "TMFIELD" << mid;
+
+    if (forcedflush == false)
+    {
+        std::string value;
+        if (pImpl_->memcached_client_->get(key.str(), value) == true && value.empty() == false)
+        {
+            DLOG(INFO) << "mid:=" << mid << ", " << value;
+
+            json_spirit::Value json;
+            if (json_spirit::read_string(value, json) == true)
+            {
+                pImpl_->JsonToMessage(json, &info);
+                return 0;
+            }
+        }
+    }
+    
+    auto result = pImpl_->QueryUserInfo(mid,
+        "SELECT * FROM `%1%`.`memberfides0`  WHERE `mid` = %2%;");
+    if (result == nullptr)
+    {
+        return -1;
+    }
+
+    json_spirit::Value array;
+    pImpl_->DataBaseToJson(result.get(), MemberFides::descriptor(), array);
+
+    auto res = pImpl_->JsonToMessage(array, &info);
+    if (res == 0)
+    {
+        auto json_str = json_spirit::write_string(array, json_spirit::raw_utf8);
+
+        DLOG(INFO) << "mid:=" << mid << ", " << json_str;
+        pImpl_->memcached_client_->set(key.str(), json_str, 0);
+    }
+
     return 0;
 }
 
 std::int32_t DataLayer::membergame(uid_type mid, MemberGame& info, 
     bool forcedflush)
 {
-    return 0;
+    std::stringstream key;
+    key << "TMGM" << mid << "|3";
+
+    if (forcedflush == false)
+    {
+        std::string value;
+        if (pImpl_->memcached_client_->get(key.str(), value) == true && value.empty() == false)
+        {
+            DLOG(INFO) << "GetGameInfoFromCache mid:=" << mid << ", value:=" << value;
+            json_spirit::Value json;
+            if (json_spirit::read_string(value, json) == true)
+            {
+                pImpl_->JsonToMessage(json, &info);
+                return 0;
+            }
+        }
+    }
+
+    auto result = pImpl_->QueryUserInfo(mid,
+        "SELECT  * FROM `%1%`.`membergame0` WHERE `mid` = %2% AND `type` = 3;");
+    if (result == nullptr)
+    {
+        return -1;
+    }
+
+    json_spirit::Value array;
+    pImpl_->DataBaseToJson(result.get(), MemberGame::descriptor(), array);
+
+    auto res = pImpl_->JsonToMessage(array, &info);
+    if (res == 0)
+    {
+        const std::string json_str = json_spirit::write_string(array);
+
+        if (pImpl_->memcached_client_->set(key.str(), json_str, 0) == true)
+        {
+            return 0;
+        }
+        else
+        {
+            LOG(INFO) << "GetPlayerGameInfo. WRITE TO CACHED FAILED mid:=" << mid;
+            return -1;
+        }
+    }
+
+    return res;
 }
 
 DataLayerImpl::DataLayerImpl()
@@ -230,7 +360,7 @@ void DataLayerImpl::DataBaseToJson(IQueryResult * result, const ::google::protob
     {
         const google::protobuf::FieldDescriptor * field_descriptor = descriptor->field(i);
         DCHECK_NOTNULL(field_descriptor);
-
+        
         switch (field_descriptor->type())
         {
         case ::google::protobuf::FieldDescriptor::TYPE_STRING:
@@ -251,4 +381,30 @@ void DataLayerImpl::DataBaseToJson(IQueryResult * result, const ::google::protob
     }
 
     json = array;
+}
+
+std::unique_ptr<IQueryResult> DataLayerImpl::QueryUserInfo(uid_type mid,const std::string& sql)
+{
+    std::string sql_buffer;
+    try
+    {
+        sql_buffer = (boost::format(sql.c_str()) %
+            prefix_ % mid).str();
+
+        DLOG(INFO) << "SQL:=" << sql_buffer;
+    }
+    catch (std::exception & e)
+    {
+        LOG(INFO) << "QueryUserInfo, FAILED, exception:=" << e.what();
+        return nullptr;
+    }
+
+    std::unique_ptr<IQueryResult> result(database_client_->PQuery(sql_buffer));
+    if (result.get() == nullptr || result->RowCount() == 0)
+    {
+        LOG(ERROR) << "QueryUserInfo, FAILED mid:=" << mid;
+        return nullptr;
+    }
+
+    return std::move(result);
 }

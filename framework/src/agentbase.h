@@ -18,6 +18,9 @@ public:
 
     virtual void SendTo(const assistx2::Stream& packet);
 
+    virtual bool GoldPay(const std::int64_t gold,
+        const std::int32_t pay_type);
+
     virtual const AgentType& agent_type() const;
 
     virtual void set_uid(const uid_type uid);
@@ -37,6 +40,9 @@ public:
 
     virtual void set_connect_status(bool status);
     virtual const bool connect_status() const;
+
+    virtual void set_seat_no(const std::int32_t seatno);
+    virtual const std::int32_t seat_no() const;
 private:
     DISALLOW_COPY_AND_ASSIGN(AgentBase);
 private:

@@ -7,9 +7,10 @@ public:
     ~SeatImpl();
 public:
     std::int32_t seat_no_;
-    uid_type player_uid_;
+    std::shared_ptr<Agent > player_;
     Seat::SeatState seat_state_ = Seat::SeatState::EMPTY;
     std::uint32_t seat_player_state_ = 0;
+    Data data_;
 };
 
 Seat::Seat(std::int32_t no):
@@ -23,14 +24,14 @@ Seat::~Seat()
 
 }
 
-void Seat::set_player_uid(const uid_type uid)
+void Seat::set_player(std::shared_ptr<Agent > player)
 {
-    pImpl_->player_uid_ = uid;
+    pImpl_->player_ = player;
 }
 
-const uid_type Seat::player_uid() const
+const std::shared_ptr<Agent > Seat::player() const
 {
-    return pImpl_->player_uid_;
+    return pImpl_->player_;
 }
 
 const std::int32_t Seat::seat_no() const
@@ -56,6 +57,11 @@ void Seat::set_seat_player_state(const std::uint32_t state)
 const std::uint32_t Seat::seat_player_state()
 {
     return pImpl_->seat_player_state_;
+}
+
+Data* Seat::data()
+{
+    return &pImpl_->data_;
 }
 
 SeatImpl::SeatImpl()

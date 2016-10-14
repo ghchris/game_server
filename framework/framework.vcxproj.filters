@@ -7,11 +7,17 @@
     <Filter Include="db">
       <UniqueIdentifier>{646c3dc3-3ba8-4fc5-91ab-f45330ec3aab}</UniqueIdentifier>
     </Filter>
-    <Filter Include="datastruct">
-      <UniqueIdentifier>{bb9ec3a3-92d7-4645-a77f-7d0464a73483}</UniqueIdentifier>
-    </Filter>
     <Filter Include="scene">
       <UniqueIdentifier>{0c4ac026-ca82-4057-bc97-70ab68abf5ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scene\roomscene">
+      <UniqueIdentifier>{41df87a5-4501-407c-b271-ea6937a862bf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="game">
+      <UniqueIdentifier>{bb9b5779-713e-4c7e-a00e-560da1e777b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="algorithm">
+      <UniqueIdentifier>{d75dde59-36f3-4471-973a-411b3d9c4ded}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -21,15 +27,6 @@
     <ClCompile Include="main.cc" />
     <ClCompile Include="src\agentbase.cc">
       <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="datastruct\membercommongame.pb.cc">
-      <Filter>datastruct</Filter>
-    </ClCompile>
-    <ClCompile Include="datastruct\memberfides.pb.cc">
-      <Filter>datastruct</Filter>
-    </ClCompile>
-    <ClCompile Include="datastruct\membergame.pb.cc">
-      <Filter>datastruct</Filter>
     </ClCompile>
     <ClCompile Include="db\datalayer.cc">
       <Filter>db</Filter>
@@ -49,6 +46,54 @@
     <ClCompile Include="src\playeragent.cc">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="scene\roombase.cc">
+      <Filter>scene\roomscene</Filter>
+    </ClCompile>
+    <ClCompile Include="scene\table.cc">
+      <Filter>scene\roomscene</Filter>
+    </ClCompile>
+    <ClCompile Include="scene\seat.cc">
+      <Filter>scene\roomscene</Filter>
+    </ClCompile>
+    <ClCompile Include="game\privateroom.cc">
+      <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="db\membercommongame.pb.cc">
+      <Filter>db</Filter>
+    </ClCompile>
+    <ClCompile Include="db\memberfides.pb.cc">
+      <Filter>db</Filter>
+    </ClCompile>
+    <ClCompile Include="db\membergame.pb.cc">
+      <Filter>db</Filter>
+    </ClCompile>
+    <ClCompile Include="game\hzmajiangroom.cc">
+      <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="game\gameconfigdata.cc">
+      <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="algorithm\cardbase.cc">
+      <Filter>algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="algorithm\cardgenerator.cc">
+      <Filter>algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="algorithm\cardgroup.cc">
+      <Filter>algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="algorithm\cardlogicbase.cc">
+      <Filter>algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="algorithm\hzmajianglogic.cc">
+      <Filter>algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="algorithm\main.cc">
+      <Filter>algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="algorithm\majiang.cc">
+      <Filter>algorithm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\agent.h">
@@ -62,15 +107,6 @@
     </ClInclude>
     <ClInclude Include="src\define.h">
       <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="datastruct\membercommongame.pb.h">
-      <Filter>datastruct</Filter>
-    </ClInclude>
-    <ClInclude Include="datastruct\memberfides.pb.h">
-      <Filter>datastruct</Filter>
-    </ClInclude>
-    <ClInclude Include="datastruct\membergame.pb.h">
-      <Filter>datastruct</Filter>
     </ClInclude>
     <ClInclude Include="db\datalayer.h">
       <Filter>db</Filter>
@@ -92,6 +128,60 @@
     </ClInclude>
     <ClInclude Include="src\playeragent.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="scene\roombase.h">
+      <Filter>scene\roomscene</Filter>
+    </ClInclude>
+    <ClInclude Include="scene\table.h">
+      <Filter>scene\roomscene</Filter>
+    </ClInclude>
+    <ClInclude Include="scene\seat.h">
+      <Filter>scene\roomscene</Filter>
+    </ClInclude>
+    <ClInclude Include="game\privateroom.h">
+      <Filter>game</Filter>
+    </ClInclude>
+    <ClInclude Include="db\membercommongame.pb.h">
+      <Filter>db</Filter>
+    </ClInclude>
+    <ClInclude Include="db\memberfides.pb.h">
+      <Filter>db</Filter>
+    </ClInclude>
+    <ClInclude Include="db\membergame.pb.h">
+      <Filter>db</Filter>
+    </ClInclude>
+    <ClInclude Include="game\hzmajiangroom.h">
+      <Filter>game</Filter>
+    </ClInclude>
+    <ClInclude Include="game\gameconfigdata.h">
+      <Filter>game</Filter>
+    </ClInclude>
+    <ClInclude Include="algorithm\card.h">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="algorithm\cardbase.h">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="algorithm\cardgenerator.h">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="algorithm\cardgroup.h">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="algorithm\cardlogic.h">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="algorithm\cardlogicbase.h">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="algorithm\hzmajianglogic.h">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="algorithm\majiang.h">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="game\seatdata.h">
+      <Filter>game</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

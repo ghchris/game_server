@@ -102,12 +102,21 @@ class MemberGame : public ::google::protobuf::Message {
   inline ::google::protobuf::int64 jifen() const;
   inline void set_jifen(::google::protobuf::int64 value);
 
+  // required int32 type = 3;
+  inline bool has_type() const;
+  inline void clear_type();
+  static const int kTypeFieldNumber = 3;
+  inline ::google::protobuf::int32 type() const;
+  inline void set_type(::google::protobuf::int32 value);
+
   // @@protoc_insertion_point(class_scope:MemberGame)
  private:
   inline void set_has_mid();
   inline void clear_has_mid();
   inline void set_has_jifen();
   inline void clear_has_jifen();
+  inline void set_has_type();
+  inline void clear_has_type();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -115,6 +124,7 @@ class MemberGame : public ::google::protobuf::Message {
   mutable int _cached_size_;
   ::google::protobuf::int64 jifen_;
   ::google::protobuf::int32 mid_;
+  ::google::protobuf::int32 type_;
   friend void  protobuf_AddDesc_membergame_2eproto();
   friend void protobuf_AssignDesc_membergame_2eproto();
   friend void protobuf_ShutdownFile_membergame_2eproto();
@@ -175,6 +185,30 @@ inline void MemberGame::set_jifen(::google::protobuf::int64 value) {
   set_has_jifen();
   jifen_ = value;
   // @@protoc_insertion_point(field_set:MemberGame.jifen)
+}
+
+// required int32 type = 3;
+inline bool MemberGame::has_type() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void MemberGame::set_has_type() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void MemberGame::clear_has_type() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void MemberGame::clear_type() {
+  type_ = 0;
+  clear_has_type();
+}
+inline ::google::protobuf::int32 MemberGame::type() const {
+  // @@protoc_insertion_point(field_get:MemberGame.type)
+  return type_;
+}
+inline void MemberGame::set_type(::google::protobuf::int32 value) {
+  set_has_type();
+  type_ = value;
+  // @@protoc_insertion_point(field_set:MemberGame.type)
 }
 
 

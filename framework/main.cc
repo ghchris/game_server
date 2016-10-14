@@ -53,6 +53,12 @@ int main(int argc, char ** argv)
         return 0;
     }
 
+    if (!DataLayer::getInstance()->Init())
+    {
+        LOG(INFO) << "DataLayer Failed";
+        return 0;
+    }
+
     char path[512] = { 0 };
 
     std::fstream pid;

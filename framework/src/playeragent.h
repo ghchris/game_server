@@ -14,7 +14,14 @@ public:
     explicit PlayerAgent(std::shared_ptr<assistx2::TcpHanlderWrapper> connector);
     virtual ~PlayerAgent();
 
+    virtual bool Serialize(bool loadorsave);
     virtual void SendTo(const assistx2::Stream& packet);
+    virtual bool GoldPay(const std::int64_t gold,
+        const std::int32_t pay_type);
+
+    virtual MemberCommonGame* member_common_game();
+    virtual MemberFides* member_fides() ;
+    virtual MemberGame* member_game();
 private:
     std::unique_ptr< PlayerAgentImpl > pImpl_;
 };

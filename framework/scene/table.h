@@ -23,6 +23,7 @@ public:
     Seat* GetByUid(uid_type uid);
     Seat* GetBySeatNo(std::int32_t seatno);
     const std::vector< Seat* >& GetSeats() const;
+    std::int32_t player_count();
 private:
     DISALLOW_COPY_AND_ASSIGN(Table);
 private:

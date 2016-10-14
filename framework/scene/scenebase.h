@@ -13,7 +13,7 @@ public:
 
     const std::uint32_t player_count() const;
     const std::map<uid_type, std::shared_ptr<Agent > > & players_agent() const;
-    void BroadCast(assistx2::Stream & packet);
+    void BroadCast(assistx2::Stream & packet, std::shared_ptr<Agent > exclude = nullptr);
 public:
     virtual const std::uint32_t scene_id() const;
     virtual const std::string scene_type() const;

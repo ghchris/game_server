@@ -8,12 +8,16 @@
 #include "define.h"
 #include <string>
 #include <memory>
+
 //agent 接口类,一个agent对应一个客户端
 
 namespace assistx2 {
     class Stream;
 }
 
+class MemberCommonGame;
+class MemberFides;
+class MemberGame;
 class WatchDog;
 class Scene;
 class Agent: public std::enable_shared_from_this<Agent>
@@ -28,6 +32,10 @@ public:
 
     //发消息给客户端
     virtual void SendTo(const assistx2::Stream& packet) = 0;
+
+    //支付金币
+    virtual bool GoldPay(const std::int64_t gold, 
+        const std::int32_t pay_type) = 0;
 
     //获取agent类型
     virtual const AgentType& agent_type() const = 0;
@@ -55,6 +63,13 @@ public:
     //存取连接状态
     virtual void set_connect_status(bool status) = 0;
     virtual const bool connect_status() const = 0;
+
+    virtual void set_seat_no(const std::int32_t seatno) = 0;
+    virtual const std::int32_t seat_no() const = 0;
+
+    virtual MemberCommonGame* member_common_game() = 0;
+    virtual MemberFides* member_fides() = 0;
+    virtual MemberGame* member_game() = 0;
 };
 
 #endif //FRAMEWORK_SRC_AGENT_H_

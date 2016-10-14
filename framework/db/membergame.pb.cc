@@ -32,9 +32,10 @@ void protobuf_AssignDesc_membergame_2eproto() {
       "membergame.proto");
   GOOGLE_CHECK(file != NULL);
   MemberGame_descriptor_ = file->message_type(0);
-  static const int MemberGame_offsets_[2] = {
+  static const int MemberGame_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MemberGame, mid_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MemberGame, jifen_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MemberGame, type_),
   };
   MemberGame_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -77,8 +78,8 @@ void protobuf_AddDesc_membergame_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\020membergame.proto\"(\n\nMemberGame\022\013\n\003mid\030"
-    "\001 \002(\005\022\r\n\005jifen\030\002 \002(\003", 60);
+    "\n\020membergame.proto\"6\n\nMemberGame\022\013\n\003mid\030"
+    "\001 \002(\005\022\r\n\005jifen\030\002 \002(\003\022\014\n\004type\030\003 \002(\005", 74);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "membergame.proto", &protobuf_RegisterTypes);
   MemberGame::default_instance_ = new MemberGame();
@@ -98,6 +99,7 @@ struct StaticDescriptorInitializer_membergame_2eproto {
 #ifndef _MSC_VER
 const int MemberGame::kMidFieldNumber;
 const int MemberGame::kJifenFieldNumber;
+const int MemberGame::kTypeFieldNumber;
 #endif  // !_MSC_VER
 
 MemberGame::MemberGame()
@@ -120,6 +122,7 @@ void MemberGame::SharedCtor() {
   _cached_size_ = 0;
   mid_ = 0;
   jifen_ = GOOGLE_LONGLONG(0);
+  type_ = 0;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -165,7 +168,7 @@ void MemberGame::Clear() {
     ::memset(&first, 0, n);                                \
   } while (0)
 
-  ZR_(jifen_, mid_);
+  ZR_(jifen_, type_);
 
 #undef OFFSET_OF_FIELD_
 #undef ZR_
@@ -209,6 +212,21 @@ bool MemberGame::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
+        if (input->ExpectTag(24)) goto parse_type;
+        break;
+      }
+
+      // required int32 type = 3;
+      case 3: {
+        if (tag == 24) {
+         parse_type:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &type_)));
+          set_has_type();
+        } else {
+          goto handle_unusual;
+        }
         if (input->ExpectAtEnd()) goto success;
         break;
       }
@@ -248,6 +266,11 @@ void MemberGame::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteInt64(2, this->jifen(), output);
   }
 
+  // required int32 type = 3;
+  if (has_type()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(3, this->type(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -266,6 +289,11 @@ void MemberGame::SerializeWithCachedSizes(
   // required int64 jifen = 2;
   if (has_jifen()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(2, this->jifen(), target);
+  }
+
+  // required int32 type = 3;
+  if (has_type()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(3, this->type(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -292,6 +320,13 @@ int MemberGame::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::Int64Size(
           this->jifen());
+    }
+
+    // required int32 type = 3;
+    if (has_type()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int32Size(
+          this->type());
     }
 
   }
@@ -327,6 +362,9 @@ void MemberGame::MergeFrom(const MemberGame& from) {
     if (from.has_jifen()) {
       set_jifen(from.jifen());
     }
+    if (from.has_type()) {
+      set_type(from.type());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -344,7 +382,7 @@ void MemberGame::CopyFrom(const MemberGame& from) {
 }
 
 bool MemberGame::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
+  if ((_has_bits_[0] & 0x00000007) != 0x00000007) return false;
 
   return true;
 }
@@ -353,6 +391,7 @@ void MemberGame::Swap(MemberGame* other) {
   if (other != this) {
     std::swap(mid_, other->mid_);
     std::swap(jifen_, other->jifen_);
+    std::swap(type_, other->type_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

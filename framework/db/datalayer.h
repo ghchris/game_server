@@ -17,6 +17,10 @@ public:
 
     bool Init();
 
+    //金币支付接口, incr 可正，可负 扣錢為正， 加錢為負
+    std::int32_t Pay(const uid_type mid, const std::int64_t incr, std::int64_t &  amount, 
+        std::int64_t& real_delta, bool bForce = false);
+
     std::int32_t membercommongame(uid_type mid,MemberCommonGame& info,bool forcedflush = false);
     std::int32_t memberfides(uid_type mid, MemberFides& info, bool forcedflush = false);
     std::int32_t membergame(uid_type mid, MemberGame& info, bool forcedflush = false);

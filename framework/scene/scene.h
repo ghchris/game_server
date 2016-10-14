@@ -1,9 +1,9 @@
 #ifndef FRAMEWORK_SCENE_SCENE_H_
 #define FRAMEWORK_SCENE_SCENE_H_
 
-#include "define.h"
 #include <map>
 #include <memory>
+#include "define.h"
 
 namespace assistx2 {
     class Stream;

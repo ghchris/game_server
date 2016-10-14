@@ -89,7 +89,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>E:\myworkspace\framework\framework\scene;E:\myworkspace\framework\framework\datastruct;E:\myworkspace\framework\framework\db;E:\myworkspace\framework\framework\src;E:\workspace\lib\protobuf-master\protobuf-master\src;E:\workspace\lib\json;E:\workspace\lib\tinyxml\tinyxml;E:\workspace\lib;E:\workspace\libassistx2\libassistx2\include;E:\workspace\lib\glog-master\glog-master\src\windows;E:\workspace\lib\boost_1_60_0\boost_1_60_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\myworkspace\framework\framework\algorithm;E:\myworkspace\framework\framework\game;E:\myworkspace\framework\framework\scene;E:\myworkspace\framework\framework\db;E:\myworkspace\framework\framework\src;E:\workspace\lib\protobuf-master\protobuf-master\src;E:\workspace\lib\json;E:\workspace\lib\tinyxml\tinyxml;E:\workspace\lib;E:\workspace\libassistx2\libassistx2\include;E:\workspace\lib\glog-master\glog-master\src\windows;E:\workspace\lib\boost_1_60_0\boost_1_60_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -147,28 +147,56 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="datastruct\membercommongame.pb.cc" />
-    <ClCompile Include="datastruct\memberfides.pb.cc" />
-    <ClCompile Include="datastruct\membergame.pb.cc" />
+    <ClCompile Include="algorithm\cardbase.cc" />
+    <ClCompile Include="algorithm\cardgenerator.cc" />
+    <ClCompile Include="algorithm\cardgroup.cc" />
+    <ClCompile Include="algorithm\cardlogicbase.cc" />
+    <ClCompile Include="algorithm\hzmajianglogic.cc" />
+    <ClCompile Include="algorithm\main.cc" />
+    <ClCompile Include="algorithm\majiang.cc" />
     <ClCompile Include="db\datalayer.cc" />
+    <ClCompile Include="db\membercommongame.pb.cc" />
+    <ClCompile Include="db\memberfides.pb.cc" />
+    <ClCompile Include="db\membergame.pb.cc" />
+    <ClCompile Include="game\hzmajiangroom.cc" />
+    <ClCompile Include="game\privateroom.cc" />
+    <ClCompile Include="game\gameconfigdata.cc" />
     <ClCompile Include="main.cc" />
     <ClCompile Include="scene\GameHall.cc" />
+    <ClCompile Include="scene\roombase.cc" />
     <ClCompile Include="scene\scenebase.cc" />
     <ClCompile Include="scene\scenemanager.cc" />
+    <ClCompile Include="scene\seat.cc" />
+    <ClCompile Include="scene\table.cc" />
     <ClCompile Include="src\agentbase.cc" />
     <ClCompile Include="src\configmgr.cc" />
     <ClCompile Include="src\playeragent.cc" />
     <ClCompile Include="src\watchdog.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="datastruct\membercommongame.pb.h" />
-    <ClInclude Include="datastruct\memberfides.pb.h" />
-    <ClInclude Include="datastruct\membergame.pb.h" />
+    <ClInclude Include="algorithm\card.h" />
+    <ClInclude Include="algorithm\cardbase.h" />
+    <ClInclude Include="algorithm\cardgenerator.h" />
+    <ClInclude Include="algorithm\cardgroup.h" />
+    <ClInclude Include="algorithm\cardlogic.h" />
+    <ClInclude Include="algorithm\cardlogicbase.h" />
+    <ClInclude Include="algorithm\hzmajianglogic.h" />
+    <ClInclude Include="algorithm\majiang.h" />
     <ClInclude Include="db\datalayer.h" />
+    <ClInclude Include="db\membercommongame.pb.h" />
+    <ClInclude Include="db\memberfides.pb.h" />
+    <ClInclude Include="db\membergame.pb.h" />
+    <ClInclude Include="game\hzmajiangroom.h" />
+    <ClInclude Include="game\privateroom.h" />
+    <ClInclude Include="game\gameconfigdata.h" />
+    <ClInclude Include="game\seatdata.h" />
     <ClInclude Include="scene\GameHall.h" />
+    <ClInclude Include="scene\roombase.h" />
     <ClInclude Include="scene\scene.h" />
     <ClInclude Include="scene\scenebase.h" />
     <ClInclude Include="scene\scenemanager.h" />
+    <ClInclude Include="scene\seat.h" />
+    <ClInclude Include="scene\table.h" />
     <ClInclude Include="src\agent.h" />
     <ClInclude Include="src\agentbase.h" />
     <ClInclude Include="src\configmgr.h" />

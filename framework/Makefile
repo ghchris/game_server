@@ -29,7 +29,7 @@ LINKFLAGS += -L/usr/local/lib
 
 
 #set the include dirs
-INCLUDEDIRS = ./ ./src/ ./db/ ./scene/ ./datastruct/
+INCLUDEDIRS = ./ ./src/ ./db/ ./scene/ ./game/
 #INCLUDEDIRS += /home/poker/lib/mysql-connector-c-6.0.2-linux-sles10-x86-64bit/include/
 INCLUDES = $(foreach tmp, $(INCLUDEDIRS), -I $(tmp))
 

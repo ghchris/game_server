@@ -53,9 +53,19 @@ std::int32_t SceneBase::Leave(std::shared_ptr<Agent > player)
     return 0;
 }
 
-void SceneBase::BroadCast(assistx2::Stream & packet)
+void SceneBase::BroadCast(assistx2::Stream & packet,std::shared_ptr<Agent > exclude)
 {
-
+    for (auto iter : pImpl_->players_agent_)
+    {
+        if (iter.second->connect_status() == false)
+        {
+            continue;
+        }
+        if (exclude == nullptr || exclude->uid() != iter.second->uid())
+        {
+            iter.second->SendTo(packet);
+        }
+    }
 }
 
 const std::uint32_t SceneBase::scene_id() const

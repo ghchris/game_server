@@ -17,6 +17,7 @@ public:
     std::int32_t game_session_ = 0;
     WatchDog* wathc_dog_ = nullptr;
     bool connect_status_ = false;
+    std::int32_t seat_no_ = 0;
 };
 
 AgentBase::AgentBase(const AgentType type):
@@ -52,6 +53,12 @@ void AgentBase::Process(assistx2::Stream * packet)
 void AgentBase::SendTo(const assistx2::Stream& packet)
 {
     //do nothing
+}
+
+bool AgentBase::GoldPay(const std::int64_t gold,
+    const std::int32_t pay_type)
+{
+    return true;
 }
 
 const Agent::AgentType& AgentBase::agent_type() const
@@ -117,6 +124,16 @@ void AgentBase::set_connect_status(bool status)
 const bool AgentBase::connect_status() const
 {
     return pImpl_->connect_status_;
+}
+
+void AgentBase::set_seat_no(const std::int32_t seatno)
+{
+    pImpl_->seat_no_ = seatno;
+}
+
+const std::int32_t AgentBase::seat_no() const
+{
+    return pImpl_->seat_no_;
 }
 
 AgentBaseImpl::AgentBaseImpl()

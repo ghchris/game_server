@@ -11,6 +11,8 @@ public:
     GameHall();
     virtual ~GameHall();
 public:
+    virtual std::int32_t Enter(std::shared_ptr<Agent > player);
+    virtual std::int32_t Leave(std::shared_ptr<Agent > player);
     virtual std::int32_t OnMessage(std::shared_ptr<Agent > player, assistx2::Stream * packet);
 private:
     std::unique_ptr< GameHallImpl > pImpl_;

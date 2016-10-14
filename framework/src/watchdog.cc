@@ -13,17 +13,8 @@
 #include "playeragent.h"
 #include "scenemanager.h"
 
-//服务器向xGateWay注册
-const static std::int16_t CLINET_REQUEST_REGISTER = 10000;
-const static std::int16_t SERVER_RESPONSE_REGISTER = 10000;
-
 //用户登录
 const static std::int16_t CLIENT_REQUEST_LOGIN = 1000;
-
-//通知用户进入相应的场景
-const static std::int16_t SERVER_REQUEST_ENTER_SCENE = 1999;
-
-static const std::int32_t	SESSION_TYPE_GAME_SERVER = 2;
 
 bool g_server_closed = false;
 bool g_server_stopped = false;
@@ -40,15 +31,12 @@ public:
     std::int32_t OnClose(assistx2::TcpHandler * handler, assistx2::ErrorCode err);
     void OnRegister(assistx2::Stream * packet);
     void OnLogin(assistx2::Stream * packet);
-    void SendEnterScene(const std::int32_t & mid, const std::int32_t & scene_id,
-        const std::string & type);
 public:
     WatchDog* owner_;
     boost::asio::io_service& io_service_;
     std::string run_id_;
     std::shared_ptr<assistx2::TcpHanlderWrapper> gateway_connector_;
     std::map<uid_type, std::shared_ptr<Agent>> players_agent_;
-    std::shared_ptr<SceneManager> scene_manager_;
 };
 
 WatchDog::WatchDog(boost::asio::io_service & ios):
@@ -92,14 +80,8 @@ bool WatchDog::Initialize()
         pImpl_.get(), std::placeholders::_1, std::placeholders::_2));
     pImpl_->gateway_connector_->Connect(host, static_cast<unsigned short>(assistx2::atoi_s(port)));
 
-    pImpl_->scene_manager_ = std::make_shared<SceneManager>();
-    if (pImpl_->scene_manager_ == nullptr)
-    {
-        DLOG(ERROR) << "WatchDogImpl::pImpl_->scene_manager_ == nil";
-        return false;
-    }
-
-    pImpl_->scene_manager_->Initialize();
+   
+    SceneManager::getInstance()->Initialize();
 
     return true;
 }
@@ -220,7 +202,7 @@ void WatchDogImpl::OnLogin(assistx2::Stream * packet)
     DLOG(INFO) << "WatchDogImpl::OnLogin mid:=" << mid << " login_source:=" 
         << login_source << " game_session:=" << game_session << " ip_addr:=" << ip_addr;
 
-    auto now_scene = scene_manager_->default_scene();
+    auto now_scene = SceneManager::getInstance()->default_scene();
     std::shared_ptr<Agent> player = nullptr;
 
     auto iter = players_agent_.find(mid);
@@ -231,39 +213,33 @@ void WatchDogImpl::OnLogin(assistx2::Stream * packet)
     else
     {
         player = std::make_shared<PlayerAgent>(gateway_connector_);
+        player->set_uid(mid);
+        if ( !player->Serialize(true) )
+        {
+            return;
+        }
         players_agent_.insert(std::make_pair(mid, player));
     }
-    player->set_uid(mid);
     player->set_ip_addr(ip_addr);
     player->set_game_session(game_session);
     player->set_watch_dog(owner_);
     player->set_connect_status(true);
 
     auto scene = player->scene_object();
-    if (scene == nullptr)
-    {
-        //自动进入默认场景
-        now_scene->Enter(player);
-    }
-    else
+    if (scene != nullptr)
     {
         now_scene = scene;
     }
-    player->set_scene_object(now_scene);
 
-    SendEnterScene(mid, now_scene->scene_id(), now_scene->scene_type());
-}
-
-void WatchDogImpl::SendEnterScene(const std::int32_t & mid, const std::int32_t & scene_id,
-    const std::string & type)
-{
-    DLOG(INFO) << "WatchDogImpl::SendEnterScene()->  mid:" << mid << " type:" << type;
-
-    assistx2::Stream stream(SERVER_REQUEST_ENTER_SCENE);
-    stream.Write(mid);
-    stream.Write(scene_id);
-    stream.Write(type);
-    stream.End();
-
-    gateway_connector_->SendTo(stream.GetNativeStream());
+    auto res = now_scene->Enter(player);
+    if (res >= 0)
+    {
+        player->set_scene_object(now_scene);
+    }
+    else
+    {
+        DLOG(ERROR) << "EnterScene Failed! mid:=" << mid << ",Scene ID:="
+            << now_scene->scene_id() << ",Scene Type:=" << now_scene->scene_type()
+            << ",res:=" << res;
+    }
 }
