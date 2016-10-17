@@ -24,6 +24,8 @@ public:
     Seat* GetBySeatNo(std::int32_t seatno);
     const std::vector< Seat* >& GetSeats() const;
     std::int32_t player_count();
+    Seat* next_seat(std::int32_t seatno);
+    Seat* prev_seat(std::int32_t seatno);
 private:
     DISALLOW_COPY_AND_ASSIGN(Table);
 private:

@@ -122,6 +122,30 @@ const std::vector< Seat* >& Table::GetSeats() const
     return pImpl_->seats_;
 }
 
+Seat* Table::prev_seat(std::int32_t seatno)
+{
+    if (seatno > 1)
+    {
+        return GetBySeatNo(seatno - 1);
+    }
+    else
+    {
+        return GetBySeatNo(pImpl_->max_seat_);
+    }
+}
+
+Seat* Table::next_seat(std::int32_t seatno)
+{
+    if (seatno < pImpl_->max_seat_)
+    {
+        return GetBySeatNo(seatno + 1);
+    }
+    else
+    {
+        return GetBySeatNo(1);
+    }
+}
+
 TableImpl::TableImpl()
 {
 }

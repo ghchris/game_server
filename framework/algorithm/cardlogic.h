@@ -14,6 +14,7 @@ public:
         PENG_OPERA = 101,        //碰牌操作
         GANG_OPERA = 102,       //杠牌操作
         HUPAI_OPERA = 103,      //胡牌操作
+        CANCLE_OPERA = 104    //取消操作
     };
 public:
     CardLogic() {}

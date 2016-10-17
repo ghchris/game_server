@@ -40,9 +40,23 @@ bool CardLogicBase::CheckPeng(const std::shared_ptr<Card> card,
 bool CardLogicBase::CheckGang(const std::shared_ptr<Card> card,
     const std::shared_ptr<CardGroup> cardgroup)
 {
-    if (cardgroup->card_count(card) == 3)
+    if (card == nullptr)
     {
-        return true;
+        auto cards_info = cardgroup->hand_cards_info();
+        for (auto iter : cards_info)
+        {
+            if (iter.num == 4)
+            {
+                return true;
+            }
+        }
+    }
+    else
+    {
+        if (cardgroup->card_count(card) == 3)
+        {
+            return true;
+        }
     }
 
     return false;
