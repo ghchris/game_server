@@ -1,3 +1,5 @@
+#define GLOG_NO_ABBREVIATED_SEVERITIES
+#include <glog/logging.h>
 #include "cardlogicbase.h"
 #include "cardgroup.h"
 
@@ -29,6 +31,8 @@ CardLogicBase::~CardLogicBase()
 bool CardLogicBase::CheckPeng(const std::shared_ptr<Card> card,
     const std::shared_ptr<CardGroup> cardgroup)
 {
+    DLOG(INFO) << "CheckPeng card:" << card->getName()
+        << ",cards:=" << cardgroup->hand_cards();
     if (cardgroup->card_count(card) == 2)
     {
         return true;
@@ -42,6 +46,7 @@ bool CardLogicBase::CheckGang(const std::shared_ptr<Card> card,
 {
     if (card == nullptr)
     {
+        DLOG(INFO) << "CheckGang cards:"  << cardgroup->hand_cards();
         auto cards_info = cardgroup->hand_cards_info();
         for (auto iter : cards_info)
         {
@@ -53,6 +58,8 @@ bool CardLogicBase::CheckGang(const std::shared_ptr<Card> card,
     }
     else
     {
+        DLOG(INFO) << "CheckGang card:" << card->getName()
+            << ",cards:=" << cardgroup->hand_cards();
         if (cardgroup->card_count(card) == 3)
         {
             return true;
@@ -95,6 +102,8 @@ bool CardLogicBase::CheckTing7Dui(const std::shared_ptr<CardGroup> cardgroup)
 void CardLogicBase::ChangeCardToArray(const std::shared_ptr<Card> card,
     const std::shared_ptr<CardGroup> cardgroup)
 {
+    memset(cards_array, 0, sizeof cards_array);
+
     for (auto iter : cardgroup->hand_cards())
     {
         cards_array[iter->getType() - 1][0] += 1;

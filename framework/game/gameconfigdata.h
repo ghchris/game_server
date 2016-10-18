@@ -12,7 +12,6 @@ struct RoomData
     std::int32_t end;
     std::int32_t ju;
     std::int32_t cost;
-    std::int32_t player;
     std::string type;
     std::string name;
     std::int32_t serverid;

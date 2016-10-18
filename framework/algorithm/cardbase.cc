@@ -21,3 +21,13 @@ Card::Type CardBase::getType() const
 {
     return type_;
 }
+
+std::ostream& operator << (std::ostream& stream, const Cards& cards)
+{
+    std::string strCards;
+    for (auto iter : cards)
+    {
+        strCards += iter->getName() + ",";
+    }
+    return stream << strCards;
+}

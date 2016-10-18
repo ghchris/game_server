@@ -8,7 +8,9 @@ class PrivateRoomImpl;
 class PrivateRoom:public RoomBase
 {
 public:
-    PrivateRoom(std::uint32_t seat_count, std::uint32_t id, std::string type);
+    enum class HuType{CHOUZHUANG,ZIMOHU,QINAGGANGHU};
+public:
+    PrivateRoom(std::uint32_t id, std::string type);
     virtual ~PrivateRoom();
 
     virtual std::int32_t OnMessage(std::shared_ptr<Agent > player, assistx2::Stream * packet);
@@ -19,7 +21,8 @@ protected:
     std::shared_ptr<CardGenerator> card_generator();
 protected:
     virtual void OnGameStart();
-    virtual void OnGameOver();
+    virtual void OnGameOver(HuType type);
+    virtual void OnDisbandRoom();
     virtual void OnReConect(std::shared_ptr<Agent > player);
 private:
     friend class PrivateRoomImpl;

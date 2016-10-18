@@ -7,6 +7,7 @@
 #include "scenemanager.h"
 #include "roombase.h"
 #include "gameconfigdata.h"
+#include "table.h"
 
 const static std::int16_t NET_CONNECT_CLOSED = 1999;
 
@@ -29,6 +30,8 @@ public:
     void OnCreateRoom(std::shared_ptr<Agent > player, assistx2::Stream * packet);
     void OnEnterRoom(std::shared_ptr<Agent > player, assistx2::Stream * packet);
     void SendErrorCode(std::shared_ptr<Agent > player, const std::int16_t cmd,const std::int32_t err);
+    bool CheckParam(std::string type,std::int32_t param1, std::int32_t param2, 
+        std::int32_t param3, std::int32_t param4);
 public:
     GameHall* owner_;
 };
@@ -103,6 +106,10 @@ void GameHallImpl::OnCreateRoom(std::shared_ptr<Agent > player, assistx2::Stream
 {
     const std::string type = packet->Read<std::string>();
     const std::int32_t ju = packet->Read<std::int32_t>();
+    //const std::int32_t players = packet->Read<std::int32_t>();
+    //const std::int32_t playe_type = packet->Read<std::int32_t>();
+    //const std::int32_t game_type = packet->Read<std::int32_t>();
+    //const std::int32_t zhuaniao = packet->Read<std::int32_t>();
 
     auto room = SceneManager::getInstance()->GetRoomByType(type, ju);
     if (room == nullptr)
@@ -116,6 +123,8 @@ void GameHallImpl::OnCreateRoom(std::shared_ptr<Agent > player, assistx2::Stream
         SendErrorCode(player, CLEINT_REQUEST_CREATE_ROOM, ERROR_CODE_GOLD_NOT_ENOUGH);
         return;
     }
+
+    room->set_table_obj(std::make_shared<Table>(4));
 
     room->set_room_owner(player->uid());
     auto res = room->Enter(player);
@@ -170,4 +179,22 @@ void GameHallImpl::SendErrorCode(std::shared_ptr<Agent > player,
     stream.End();
 
     player->SendTo(stream);
+}
+
+bool GameHallImpl::CheckParam(std::string type, std::int32_t param1, std::int32_t param2,
+    std::int32_t param3, std::int32_t param4)
+{
+    if (type == "1")
+    {
+        if (param1 != 4)
+        {
+            return false;
+        }
+        if (param4 > 6)
+        {
+            return false;
+        }
+    }
+   
+    return true;
 }

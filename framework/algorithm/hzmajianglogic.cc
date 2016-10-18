@@ -1,3 +1,5 @@
+#define GLOG_NO_ABBREVIATED_SEVERITIES
+#include <glog/logging.h>
 #include "hzmajianglogic.h"
 #include "cardgroup.h"
 
@@ -27,6 +29,9 @@ bool HZMajiangLogic::CheckHu(const std::shared_ptr<Card> card,
 {
     ChangeCardToArray(card, cardgroup);
 
+    DLOG(INFO) << "CheckHu cards:" << cardgroup->hand_cards()
+        << ",hz_count_:=" << pImpl_->hz_count_;
+
     if (pImpl_->hz_count_ == 4)
     {
         return true;
@@ -54,10 +59,13 @@ bool HZMajiangLogic::CheckHu7Dui(const std::shared_ptr<Card> card,
 void HZMajiangLogic::ChangeCardToArray(const std::shared_ptr<Card> card,
     const std::shared_ptr<CardGroup> cardgroup)
 {
+    memset(cards_array, 0, sizeof cards_array);
+
     pImpl_->hz_count_ = 0;
     for (auto iter : cardgroup->hand_cards())
     {
-        if (iter->getType() == Card::Type::Zi)
+        if (iter->getType() == Card::Type::Zi &&
+             iter->getFace() == Card::Face::HongZ)
         {
             pImpl_->hz_count_ += 1;
             continue;

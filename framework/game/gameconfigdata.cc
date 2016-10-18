@@ -63,7 +63,6 @@ bool GameConfigDataImpl::ParseRoomData()
         roomcfg->end = atoi(item->Attribute("end"));
         roomcfg->ju = atoi(item->Attribute("ju"));
         roomcfg->cost = atoi(item->Attribute("cost"));
-        roomcfg->player = atoi(item->Attribute("player"));
         roomcfg->type = item->Attribute("type");
         roomcfg->name = item->Attribute("name");
         roomcfg->taxation = atoll(item->Attribute("taxation"));

@@ -12,6 +12,7 @@
 #include "gameconfigdata.h"
 #include "cardgenerator.h"
 #include "seatdata.h"
+#include "scenemanager.h"
 
 const static std::int16_t SERVER_RESPONSE_ENTER_ROOM = 1001;
 const static std::int16_t SERVER_PUSH_PLAYERS_SNAPSHOT = 1002;
@@ -20,6 +21,8 @@ const static std::int16_t SERVER_BROADCAST_PLAYER_INFO = 1004;
 const static std::int16_t CLIENT_READY_CMD = 1005;
 const static std::int16_t SERVER_BROADCAST_PLAYER_RECONNECT = 1006;
 const static std::int16_t SERVER_BROADCAST_GAME_START = 1007;
+const static std::int16_t CLEINT_REQUEST_DISBAND_ROOM = 1008;
+const static std::int16_t SERVER_BROADCAST_DISBAND_ROOM = 1008;
 
 const static std::int16_t NET_CONNECT_CLOSED = 1999;
 
@@ -37,7 +40,7 @@ public:
     void BroadCastOnEnterPlayer(std::shared_ptr<Agent > player);
     void ReConnect(std::shared_ptr<Agent > player);
     void StartGame();
-    void GameOver();
+    void DisbandRoom();
 public:
     void OnClientClose(std::shared_ptr<Agent > player);
     void OnReady(std::shared_ptr<Agent > player);
@@ -47,12 +50,10 @@ public:
     std::shared_ptr<CardGenerator> card_generator_;
 };
 
-PrivateRoom::PrivateRoom(std::uint32_t seat_count,
-    std::uint32_t id, std::string type) :
+PrivateRoom::PrivateRoom(std::uint32_t id, std::string type) :
  RoomBase(id, type),
  pImpl_(new PrivateRoomImpl(this))
 {
-    set_table_obj(std::make_shared<Table>(seat_count));
     pImpl_->card_generator_ = std::make_shared<CardGenerator>();
 }
 
@@ -64,8 +65,8 @@ PrivateRoom::~PrivateRoom()
 std::int32_t PrivateRoom::OnMessage(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
     auto cmd = packet->GetCmd();
-    DLOG(INFO) << "PrivateRoom::OnMessage()->cmd:" << cmd << " Scene:=" << scene_id()
-        << " Scene Type:=" << scene_type() << " mid:=" << player->uid();
+    //DLOG(INFO) << "PrivateRoom::OnMessage()->cmd:" << cmd << " Scene:=" << scene_id()
+    //    << " Scene Type:=" << scene_type() << " mid:=" << player->uid();
 
     switch (cmd)
     {
@@ -75,6 +76,8 @@ std::int32_t PrivateRoom::OnMessage(std::shared_ptr<Agent > player, assistx2::St
     case CLIENT_READY_CMD:
         pImpl_->OnReady(player);
         return 0;
+    case CLEINT_REQUEST_DISBAND_ROOM:
+        pImpl_->DisbandRoom();
     default:
         break;
     }
@@ -150,6 +153,10 @@ std::int32_t PrivateRoom::Leave(std::shared_ptr<Agent > player)
         {
             player->set_scene_object(next_scene);
         }
+        else
+        {
+            player->set_scene_object(nullptr);
+        }
     }
 
     return 0;
@@ -162,12 +169,23 @@ std::shared_ptr<CardGenerator> PrivateRoom::card_generator()
 
 void PrivateRoom::OnGameStart()
 {
-
+    set_room_state(RoomBase::RoomState::PLAYING);
 }
 
-void PrivateRoom::OnGameOver()
+void PrivateRoom::OnGameOver(HuType type)
 {
+    set_room_state(RoomBase::RoomState::WAITING);
 
+    if (pImpl_->played_num_ >= room_conifg_data()->ju)
+    {
+        OnDisbandRoom();
+    }
+}
+
+void PrivateRoom::OnDisbandRoom()
+{
+    pImpl_->played_num_ = 0;
+    SceneManager::getInstance()->DetachActivedPrivateRoom(this);
 }
 
 void PrivateRoom::OnReConect(std::shared_ptr<Agent > player)
@@ -337,14 +355,14 @@ void PrivateRoomImpl::OnReady(std::shared_ptr<Agent > player)
 
 void PrivateRoomImpl::StartGame()
 {
-    const auto& players = owner_->players_agent();
-    for (auto iter : players)
+    auto& seats = owner_->table_obj()->GetSeats();
+    for (auto iter : seats)
     {
-        auto seatno = iter.second->seat_no();
-        DCHECK(seatno != Table::INVALID_SEAT);
-
-        auto seat = owner_->table_obj()->GetBySeatNo(seatno);
-        if (seat->seat_player_state() != 
+        if (iter->seat_state() == Seat::SeatState::EMPTY)
+        {
+            return;
+        }
+        if (iter->seat_player_state() !=
             Seat::PLAYER_STATUS_READY)
         {
             return;
@@ -352,7 +370,6 @@ void PrivateRoomImpl::StartGame()
     }
 
     played_num_ += 1;
-    owner_->set_room_state(RoomBase::RoomState::PLAYING);
 
     auto err = ERROR_CODE_SUCCESS;
     if (owner_->room_conifg_data()->ju - played_num_ < 0)
@@ -362,6 +379,7 @@ void PrivateRoomImpl::StartGame()
 
     assistx2::Stream package(SERVER_BROADCAST_GAME_START);
     package.Write(err);
+    package.Write(played_num_);
     package.End();
     owner_->BroadCast(package);
 
@@ -370,15 +388,34 @@ void PrivateRoomImpl::StartGame()
         return;
     }
 
-    auto type = static_cast<CardGenerator::Type>(owner_->room_conifg_data()->type[0]);
+    auto type = static_cast<CardGenerator::Type>(owner_->room_conifg_data()->type[0] - 0x30);
+    DLOG(INFO) << "StartGame: roomid:=" << owner_->scene_id() << ",type:=" << static_cast<std::int32_t>(type);
     card_generator_->Reset(type);
 
     owner_->OnGameStart();
 }
 
-void PrivateRoomImpl::GameOver()
+void PrivateRoomImpl::DisbandRoom()
 {
-    owner_->set_room_state(RoomBase::RoomState::FREEZING);
+    auto& players = owner_->players_agent();
+    if (played_num_ == owner_->room_conifg_data()->ju)
+    {
+        auto room_owner = owner_->room_owner();
+        auto iter = players.find(room_owner);
+        if (iter != players.end())
+        {
+            iter->second->GoldPay(-owner_->room_conifg_data()->cost,5);
+        }
+        else
+        {
+            DLOG(ERROR) << "DisbandRoom: room_owner not in scene mid:=" << room_owner;
+        }
+    }
 
-    owner_->OnGameOver();
+    for (auto iter : players)
+    {
+        owner_->Leave(iter.second);
+    }
+
+    owner_->OnDisbandRoom();
 }

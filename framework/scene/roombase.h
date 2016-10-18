@@ -26,7 +26,7 @@ public:
 
     void set_room_config_data(std::shared_ptr<RoomData> data);
     const std::shared_ptr<RoomData> room_conifg_data() const;
-protected:
+
     void set_table_obj(std::shared_ptr<Table> obj);
     std::shared_ptr<Table> table_obj();
 private:

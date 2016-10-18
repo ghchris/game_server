@@ -54,7 +54,7 @@ bool SceneManager::Initialize()
         {
             if (iter->type == "1")
             {
-                room = new HzMajiangRoom(iter->player,i,iter->type);
+                room = new HzMajiangRoom(i,iter->type);
                 room->set_room_config_data(iter);
             }
             else

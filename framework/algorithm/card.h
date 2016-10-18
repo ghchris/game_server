@@ -53,4 +53,6 @@ public:
     static std::shared_ptr<Card > MakeMajiangCard(Card::Face face, Card::Type suit);
 };
 
+std::ostream& operator << (std::ostream& stream, const Cards& cards);
+
 #endif //MAJIANG_GAME_CARD_H_
