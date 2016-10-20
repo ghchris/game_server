@@ -19,6 +19,8 @@ public:
     virtual std::int32_t Leave(std::shared_ptr<Agent > player);
 protected:
     std::shared_ptr<CardGenerator> card_generator();
+    const std::int32_t banker_seatno() const;
+    void set_banker_seatno(const std::int32_t seatno);
 protected:
     virtual void OnGameStart();
     virtual void OnGameOver(HuType type);

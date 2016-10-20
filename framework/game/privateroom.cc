@@ -46,6 +46,7 @@ public:
     void OnReady(std::shared_ptr<Agent > player);
 public:
     PrivateRoom* owner_ = nullptr;
+    std::int32_t banker_seatno_ = Table::INVALID_SEAT;//×¯¼Ò×ùÎ»ºÅ
     std::int32_t played_num_ = 0;
     std::shared_ptr<CardGenerator> card_generator_;
 };
@@ -167,6 +168,16 @@ std::shared_ptr<CardGenerator> PrivateRoom::card_generator()
     return pImpl_->card_generator_;
 }
 
+const std::int32_t PrivateRoom::banker_seatno() const
+{
+    return pImpl_->banker_seatno_;
+}
+
+void PrivateRoom::set_banker_seatno(const std::int32_t seatno)
+{
+    pImpl_->banker_seatno_ = seatno;
+}
+
 void PrivateRoom::OnGameStart()
 {
     set_room_state(RoomBase::RoomState::PLAYING);
@@ -184,6 +195,7 @@ void PrivateRoom::OnGameOver(HuType type)
 
 void PrivateRoom::OnDisbandRoom()
 {
+    pImpl_->banker_seatno_ = Table::INVALID_SEAT;
     pImpl_->played_num_ = 0;
     SceneManager::getInstance()->DetachActivedPrivateRoom(this);
 }
@@ -217,6 +229,13 @@ void PrivateRoomImpl::RoomSnapShot(std::shared_ptr<Agent > player)
 {
     const auto& players = owner_->players_agent();
 
+    if (banker_seatno_ == Table::INVALID_SEAT)
+    {
+        auto seat = owner_->table_obj()->GetByUid(owner_->room_owner());
+        DCHECK(seat != nullptr);
+        banker_seatno_ = seat->seat_no();
+    }
+
     assistx2::Stream packet(SERVER_PUSH_PLAYERS_SNAPSHOT);
     packet.Write(static_cast<std::int32_t>(owner_->room_owner()));
     packet.Write(static_cast<std::int32_t>(owner_->room_state()));
@@ -234,15 +253,16 @@ void PrivateRoomImpl::RoomSnapShot(std::shared_ptr<Agent > player)
         packet.Write(member_fides->name());
         packet.Write(member_fides->icon());
 
-        DLOG(INFO) << "RoomSnapShot mid:=" << player->uid() << ", seatno:=" << iter.second->seat_no()
+        DLOG(INFO) << "RoomSnapShot mid:=" << iter.second->uid() << ", seatno:=" << iter.second->seat_no()
             << ", gp:=" << member_fides->gp() << ", sex:=" << member_fides->sex() 
             << ", name:=" << member_fides->name()<< ", icon:=" << member_fides->icon();
     }
+    packet.Write(banker_seatno_);
     packet.End();
 
     DLOG(INFO) << "RoomSnapShot roomid:=" << owner_->scene_id() << ",room_owner:=" << owner_->room_owner()
         << ",room_state:=" << static_cast<std::int32_t>(owner_->room_owner()) << ",played_num_:=" << played_num_
-        << ",ju:=" << owner_->room_conifg_data()->ju;
+        << ",ju:=" << owner_->room_conifg_data()->ju << ",banker_seatno_:=" << banker_seatno_;
 
     player->SendTo(packet);
 }
@@ -397,7 +417,7 @@ void PrivateRoomImpl::StartGame()
 
 void PrivateRoomImpl::DisbandRoom()
 {
-    auto& players = owner_->players_agent();
+    auto players = owner_->players_agent();
     if (played_num_ == owner_->room_conifg_data()->ju)
     {
         auto room_owner = owner_->room_owner();
@@ -412,10 +432,14 @@ void PrivateRoomImpl::DisbandRoom()
         }
     }
 
+    assistx2::Stream package(SERVER_BROADCAST_DISBAND_ROOM);
+    package.End();
+    owner_->BroadCast(package);
+
+    owner_->OnDisbandRoom();
+
     for (auto iter : players)
     {
         owner_->Leave(iter.second);
     }
-
-    owner_->OnDisbandRoom();
 }

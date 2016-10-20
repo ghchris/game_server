@@ -9,6 +9,7 @@
 #include "hzmajianglogic.h"
 #include "agent.h"
 #include "cardgroup.h"
+#include "datalayer.h"
 
 const static std::int16_t SERVER_BROADCAST_ON_DEAL = 1020;//发牌
 const static std::int16_t SERVER_BROADCAST_NEXT_PLAYER = 1021;//下个出牌人
@@ -26,6 +27,7 @@ const static std::int16_t SERVER_NOTIFY_MO_CARD = 1028;//通知用户摸牌
 const static std::int16_t SERVER_BROADCAST_QIANGGANG_HU = 1029;//抢杠胡
 const static std::int16_t SERVER_BROADCAST_ZHA_NIAO = 1030;//扎鸟
 const static std::int16_t SERVER_BROADCAST_GAME_ACCOUNT = 1031;//单局结算
+const static std::int16_t SERVER_NOTIFY_PLAYER_TABLE_DATA = 1032; //发送玩家桌面数据
 
 class HzMajiangRoomImpl
 {
@@ -48,6 +50,7 @@ public:
     std::int32_t GetZhongNiaoNum(std::int32_t seatno);
     void ClearGameData();
     void ClearRoomData();
+    void NotifyTableData(std::shared_ptr<Agent > player);
 public:
     void OnPlay(std::shared_ptr<Agent > player, assistx2::Stream * packet);
     void OnPeng(std::shared_ptr<Agent > player, assistx2::Stream * packet);
@@ -56,7 +59,6 @@ public:
     void OnCancle(std::shared_ptr<Agent > player, assistx2::Stream * packet);
 public:
     HzMajiangRoom* owner_;
-    std::int32_t banker_seatno_ = Table::INVALID_SEAT;//庄家座位号
     std::int32_t active_player_ = Table::INVALID_SEAT;//当前激活的玩家座位号(房间里的玩家都能看见)
     std::int32_t now_operator_ = Table::INVALID_SEAT;//当前操作座位号(只有自己才能看见)
     std::int32_t now_played_seatno_ = Table::INVALID_SEAT;//当前打出牌的座位号
@@ -114,19 +116,12 @@ void HzMajiangRoom::OnGameStart()
 {
     PrivateRoom::OnGameStart();
 
-    if (pImpl_->banker_seatno_ == Table::INVALID_SEAT)
-    {
-        auto seat = table_obj()->GetByUid(room_owner());
-        DCHECK(seat != nullptr);
-        pImpl_->banker_seatno_ = seat->seat_no();
-    }
-
     auto& seats = table_obj()->GetSeats();
     for (auto iter : seats)
     {
         Cards cards;
         assistx2::Stream package(SERVER_BROADCAST_ON_DEAL);
-        if (pImpl_->banker_seatno_ == iter->seat_no())
+        if (banker_seatno() == iter->seat_no())
         {
             package.Write(14);
             auto card = card_generator()->Pop();
@@ -143,7 +138,7 @@ void HzMajiangRoom::OnGameStart()
             package.Write(card->getName());
             cards.push_back(card);
         }
-       
+        package.Write(static_cast<std::int32_t>(card_generator()->count()));
         package.End();
 
         DCHECK(iter->player() != nullptr);
@@ -154,15 +149,15 @@ void HzMajiangRoom::OnGameStart()
         iter->data()->hand_cards_ = std::make_shared<CardGroup>(cards);
     }
 
-     pImpl_->BroadCastNextPlayer(pImpl_->banker_seatno_);
+     pImpl_->BroadCastNextPlayer(banker_seatno());
 
-     auto operations = pImpl_->GetOperations(pImpl_->banker_seatno_);
+     auto operations = pImpl_->GetOperations(banker_seatno());
      if (operations.size() == 0)
      {
          operations.push_back(CardLogic::PLAY_OPERA);
      }
 
-     pImpl_->NotifyOperation(pImpl_->banker_seatno_,operations);
+     pImpl_->NotifyOperation(banker_seatno(),operations);
 }
 
 void HzMajiangRoom::OnGameOver(HuType type)
@@ -176,7 +171,7 @@ void HzMajiangRoom::OnGameOver(HuType type)
         auto num = pImpl_->GetZhongNiaoNum(hu_seatno);
         auto sum_score = 2 + num * 2;
         pImpl_->CalculateScore(hu_seatno, sum_score);
-        pImpl_->banker_seatno_ = hu_seatno;
+        set_banker_seatno( hu_seatno );
     }
     else if (type == PrivateRoom::HuType::QINAGGANGHU)
     {
@@ -201,16 +196,16 @@ void HzMajiangRoom::OnGameOver(HuType type)
         } 
         if (pImpl_->hu_players_.size() >= 2u)
         {
-            pImpl_->banker_seatno_ = pImpl_->beiqiang_seat_;
+            set_banker_seatno( pImpl_->beiqiang_seat_ );
         }
         else
         {
-            pImpl_->banker_seatno_ = pImpl_->hu_players_[0];
+            set_banker_seatno( pImpl_->hu_players_[0] );
         }
     }
     else 
     {
-        pImpl_->banker_seatno_ = pImpl_->last_mo_seat_;
+        set_banker_seatno( pImpl_->last_mo_seat_ );
         //do nothing
     }
 
@@ -222,8 +217,25 @@ void HzMajiangRoom::OnGameOver(HuType type)
     {
         iter->data()->seat_score_ += iter->data()->game_score_;
         stream.Write(iter->seat_no());
+        stream.Write(static_cast<std::int32_t>(iter->player()->uid()));
+        stream.Write(iter->player()->member_fides()->name());
         stream.Write(iter->data()->game_score_);
         stream.Write(iter->data()->seat_score_);
+        //存牌区的牌
+        auto operated_cards = iter->data()->operated_cards_;
+        stream.Write(static_cast<std::int32_t>(operated_cards.size()));
+        for (auto it : operated_cards)
+        {
+            stream.Write(it.first->getName());
+            stream.Write(static_cast<std::int32_t>(it.second));
+        }
+        //手上的牌
+        auto hand_cards = iter->data()->hand_cards_->hand_cards();
+        stream.Write(static_cast<std::int32_t>(hand_cards.size()));
+        for (auto iter : hand_cards)
+        {
+            stream.Write(iter->getName());
+        }
     }
     stream.End();
 
@@ -243,6 +255,18 @@ void HzMajiangRoom::OnDisbandRoom()
     pImpl_->ClearRoomData();
 
     PrivateRoom::OnDisbandRoom();
+}
+
+void HzMajiangRoom::OnReConect(std::shared_ptr<Agent > player)
+{
+    PrivateRoom::OnReConect(player);
+
+    if (room_state() != RoomBase::RoomState::PLAYING)
+    {
+        return;
+    }
+
+    pImpl_->NotifyTableData(player);
 }
 
 
@@ -335,6 +359,8 @@ void HzMajiangRoomImpl::OnPlay(std::shared_ptr<Agent > player, assistx2::Stream 
     seat->data()->hand_cards_->RemoveCard(card);
     seat->data()->played_cards_.push(card);
 
+    seat->data()->mo_card_ = nullptr;
+
     now_played_seatno_ = seatno;
 
     BroadCastPlayedCard(now_played_seatno_, card);
@@ -370,6 +396,9 @@ void HzMajiangRoomImpl::OnPeng(std::shared_ptr<Agent > player, assistx2::Stream 
 
     auto card = played_seat->data()->played_cards_.top();
     played_seat->data()->played_cards_.pop();
+
+    now_played_seatno_ = Table::INVALID_SEAT;
+
     DCHECK(card_logic_->CheckPeng(card, seat->data()->hand_cards_) == true);
     CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
     CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
@@ -430,6 +459,7 @@ void HzMajiangRoomImpl::OnGang(std::shared_ptr<Agent > player, assistx2::Stream 
                 {
                     continue;
                 }
+                DCHECK(seat->data()->mo_card_ != nullptr);
                 if (iter.first->getFace() == seat->data()->mo_card_->getFace())
                 {
                     type = GGANG;
@@ -458,6 +488,8 @@ void HzMajiangRoomImpl::OnGang(std::shared_ptr<Agent > player, assistx2::Stream 
 
         card = played_seat->data()->played_cards_.top();
         played_seat->data()->played_cards_.pop();
+
+        now_played_seatno_ = Table::INVALID_SEAT;
        
         played_seat->data()->game_score_ -= 3;
         seat->data()->game_score_ += 3;
@@ -547,6 +579,13 @@ void HzMajiangRoomImpl::OnCancle(std::shared_ptr<Agent > player, assistx2::Strea
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
 
+    if (now_operator_ != seatno)
+    {
+        DLOG(ERROR) << "OnCancle: mid:=" << player->uid()
+            << ",now_operator_:=" << now_operator_ << " != seatno:=" << seatno;
+        SendErrorCode(player, CLIENT_REQUEST_ONCANCLE, -1);
+    }
+
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
     DCHECK(seat != nullptr);
 
@@ -554,13 +593,15 @@ void HzMajiangRoomImpl::OnCancle(std::shared_ptr<Agent > player, assistx2::Strea
     {
         DLOG(ERROR) << "OnCancle:CheckOperation Failed mid:=" << player->uid()
             << ",operate:=" << CardLogic::CANCLE_OPERA;
-        SendErrorCode(player, CLIENT_REQUEST_ONPENG, -1);
+        SendErrorCode(player, CLIENT_REQUEST_ONCANCLE, -1);
         return;
     }
 
     DCHECK(active_player_ != Table::INVALID_SEAT);
     auto nextseat = owner_->table_obj()->next_seat(active_player_);
     DCHECK(nextseat != nullptr);
+
+    SendErrorCode(player, CLIENT_REQUEST_ONCANCLE, 0);
 
     BroadCastNextPlayer(nextseat->seat_no());
 
@@ -822,9 +863,9 @@ void HzMajiangRoomImpl::ZhaNiao()
         auto& seats = owner_->table_obj()->GetSeats();
         for (auto iter : seats)
         {
-            auto num = iter->seat_no() - banker_seatno_;//玩家和庄家的距离
+            auto num = iter->seat_no() - owner_->banker_seatno();//玩家和庄家的距离
             if (iter_card->getFace() == Card::Face::HongZ &&
-                iter->seat_no() == banker_seatno_)
+                iter->seat_no() == owner_->banker_seatno())
             {
                 //do nothing
             }
@@ -903,7 +944,6 @@ void HzMajiangRoomImpl::ClearGameData()
 
 void HzMajiangRoomImpl::ClearRoomData()
 {
-    banker_seatno_ = Table::INVALID_SEAT;
     active_player_ = Table::INVALID_SEAT;
     now_operator_ = Table::INVALID_SEAT;
     now_played_seatno_ = Table::INVALID_SEAT;
@@ -926,5 +966,69 @@ void HzMajiangRoomImpl::ClearRoomData()
         {
             iter->data()->played_cards_.pop();
         }
+    }
+}
+
+void HzMajiangRoomImpl::NotifyTableData(std::shared_ptr<Agent > player)
+{
+    auto seatno = player->seat_no();
+    DCHECK(seatno != Table::INVALID_SEAT);
+    auto seat = owner_->table_obj()->GetBySeatNo(seatno);
+    DCHECK(seat != nullptr);
+
+    auto mo_card = seat->data()->mo_card_;
+    auto hand_cards = seat->data()->hand_cards_->hand_cards();
+    assistx2::Stream stream(SERVER_NOTIFY_PLAYER_TABLE_DATA);
+    if (mo_card != nullptr)
+    {
+        stream.Write(mo_card->getName());
+    }
+    else
+    {
+        stream.Write(std::string(""));
+    }
+    //手上的牌
+    stream.Write(static_cast<std::int32_t>(hand_cards.size()));
+    for (auto iter : hand_cards)
+    {
+        stream.Write(iter->getName());
+    }
+    auto& seats = owner_->table_obj()->GetSeats();
+    stream.Write(static_cast<std::int32_t>(
+        owner_->table_obj()->player_count()));
+    for (auto iter : seats)
+    {
+        stream.Write(iter->seat_no());
+        auto seat_hand_cards = iter->data()->hand_cards_->hand_cards();
+        stream.Write(static_cast<std::int32_t>(seat_hand_cards.size()));
+        //存牌区的牌
+        auto operated_cards = iter->data()->operated_cards_;
+        stream.Write(static_cast<std::int32_t>(operated_cards.size()));
+        for (auto it : operated_cards)
+        {
+            stream.Write(it.first->getName());
+            stream.Write(static_cast<std::int32_t>(it.second));
+        }
+        //出牌区的牌
+        auto played_cards = iter->data()->played_cards_;
+        stream.Write(static_cast<std::int32_t>(played_cards.size()));
+        while (!played_cards.empty())
+        {
+            auto card = played_cards.top();
+            played_cards.pop();
+            stream.Write(card->getName());
+        }
+    }
+    stream.Write(now_played_seatno_);
+    stream.Write(active_player_);
+    stream.Write(static_cast<std::int32_t>(
+        owner_->card_generator()->count()));
+    stream.End();
+
+    owner_->BroadCast(stream);
+
+    if (now_operator_ == seatno)
+    {
+        NotifyOperation(seatno, seat->data()->now_operate_);
     }
 }

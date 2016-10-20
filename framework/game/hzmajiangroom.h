@@ -15,6 +15,7 @@ protected:
     virtual void OnGameStart();
     virtual void OnGameOver(HuType type);
     virtual void OnDisbandRoom();
+    virtual void OnReConect(std::shared_ptr<Agent > player);
 private:
     friend class HzMajiangRoomImpl;
     std::unique_ptr< HzMajiangRoomImpl > pImpl_;

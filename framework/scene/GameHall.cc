@@ -124,7 +124,7 @@ void GameHallImpl::OnCreateRoom(std::shared_ptr<Agent > player, assistx2::Stream
         return;
     }
 
-    room->set_table_obj(std::make_shared<Table>(4));
+    room->set_table_obj(std::make_shared<Table>(2));
 
     room->set_room_owner(player->uid());
     auto res = room->Enter(player);
