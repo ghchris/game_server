@@ -31,9 +31,7 @@ PlayerAgent::PlayerAgent(std::shared_ptr<assistx2::TcpHanlderWrapper> connector)
 
 PlayerAgent::~PlayerAgent()
 {
-    DLOG(INFO) << "mid:=" << uid()
-       << " connect_status:=" << connect_status() 
-       << " Has been Destroyed!";
+ 
 }
 
 bool PlayerAgent::Serialize(bool loadorsave)

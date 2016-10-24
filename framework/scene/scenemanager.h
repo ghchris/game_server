@@ -13,7 +13,7 @@ public:
     SceneManager();
     virtual ~SceneManager();
 
-    bool Initialize();
+    bool Initialize(boost::asio::io_service & ios);
 
     Scene* default_scene();
     RoomBase* GetRoomByType(const std::string& type,std::int32_t ju);

@@ -1,6 +1,5 @@
 #include "roombase.h"
 #include "table.h"
-
 class RoomBaseImpl
 {
 public:
@@ -11,6 +10,7 @@ public:
     std::shared_ptr<Table> table_ = nullptr;
     uid_type room_owner_ = 0;
     std::shared_ptr<RoomData> room_data_ = nullptr;
+    time_t create_time_ = 0;
 };
 
 RoomBase::RoomBase(std::uint32_t id, std::string type) :
@@ -72,6 +72,16 @@ void RoomBase::set_room_config_data(std::shared_ptr<RoomData> data)
 const std::shared_ptr<RoomData> RoomBase::room_conifg_data() const
 {
     return pImpl_->room_data_;
+}
+
+void RoomBase::set_create_time(const time_t time)
+{
+    pImpl_->create_time_ = time;
+}
+
+const time_t RoomBase::create_time() const
+{
+    return pImpl_->create_time_;
 }
 
 RoomBaseImpl::RoomBaseImpl()

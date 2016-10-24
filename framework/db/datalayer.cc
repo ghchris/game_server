@@ -116,7 +116,7 @@ std::int32_t DataLayer::membercommongame(uid_type mid, MemberCommonGame& info,
         std::string value;
         if (pImpl_->memcached_client_->get(key.str(), value) == true && value.empty() == false)
         {
-            DLOG(INFO) << "GetGameInfoFromCache mid:=" << mid << ", value:=" << value;
+            DLOG(INFO) << "membercommongame mid:=" << mid << ", value:=" << value;
             json_spirit::Value json;
             if (json_spirit::read_string(value, json) == true)
             {
@@ -210,7 +210,7 @@ std::int32_t DataLayer::membergame(uid_type mid, MemberGame& info,
         std::string value;
         if (pImpl_->memcached_client_->get(key.str(), value) == true && value.empty() == false)
         {
-            DLOG(INFO) << "GetGameInfoFromCache mid:=" << mid << ", value:=" << value;
+            DLOG(INFO) << "membergame mid:=" << mid << ", value:=" << value;
             json_spirit::Value json;
             if (json_spirit::read_string(value, json) == true)
             {
@@ -280,12 +280,12 @@ std::int32_t DataLayerImpl::JsonToMessage(json_spirit::Value & json, ::google::p
     }
 
     const google::protobuf::Reflection * reflection = msg->GetReflection();
-    DCHECK_NOTNULL(reflection);
+    DCHECK(reflection != nullptr);
 
     for (int i = 0; i < descriptor->field_count(); ++i)
     {
         const google::protobuf::FieldDescriptor * field_descriptor = descriptor->field(i);
-        DCHECK_NOTNULL(field_descriptor);
+        DCHECK(field_descriptor != nullptr);
 
         // ÉèÖÃÖµ
         switch (field_descriptor->type())
@@ -317,7 +317,7 @@ std::int32_t DataLayerImpl::JsonToMessage(json_spirit::Value & json, ::google::p
 void DataLayerImpl::MessageToJson(::google::protobuf::Message * msg, json_spirit::Value & json)
 {
     const google::protobuf::Reflection * reflection = msg->GetReflection();
-    DCHECK_NOTNULL(reflection);
+    DCHECK(reflection != nullptr);
 
     auto descriptor = msg->GetDescriptor();
 
@@ -326,7 +326,7 @@ void DataLayerImpl::MessageToJson(::google::protobuf::Message * msg, json_spirit
     for (int i = 0; i < descriptor->field_count(); ++i)
     {
         const google::protobuf::FieldDescriptor * field_descriptor = descriptor->field(i);
-        DCHECK_NOTNULL(field_descriptor);
+        DCHECK(field_descriptor != nullptr);
 
         switch (field_descriptor->type())
         {
@@ -359,7 +359,7 @@ void DataLayerImpl::DataBaseToJson(IQueryResult * result, const ::google::protob
     for (int i = 0; i < descriptor->field_count(); ++i)
     {
         const google::protobuf::FieldDescriptor * field_descriptor = descriptor->field(i);
-        DCHECK_NOTNULL(field_descriptor);
+        DCHECK(field_descriptor != nullptr);
         
         switch (field_descriptor->type())
         {

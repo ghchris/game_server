@@ -14,6 +14,8 @@ public:
     void Reset(Type type = Type::GENERAL_MAJIANG);
     std::shared_ptr< Card > Pop();
     std::uint32_t count() const;
+protected:
+    void MakeTestCard();
 private:
     Cards cards_;
 };

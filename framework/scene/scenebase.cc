@@ -8,8 +8,9 @@ public:
     ~SceneBaseImpl();
 public:
     std::map<uid_type, std::shared_ptr<Agent > > players_agent_;
-    std::uint32_t scene_id_;
-    std::string scene_type_;
+    std::uint32_t scene_id_ = 0;
+    std::string scene_type_ = "";
+    std::shared_ptr<SceneTimer> scene_timer_ = nullptr;
 };
 
 SceneBase::SceneBase(std::uint32_t id, std::string type):
@@ -27,6 +28,11 @@ SceneBase::~SceneBase()
 std::int32_t SceneBase::OnMessage(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
     return 0;
+}
+
+void SceneBase::OnTimer(boost::shared_ptr<assistx2::timer2::TimerContext > context)
+{
+
 }
 
 std::int32_t SceneBase::Enter(std::shared_ptr<Agent > player)
@@ -78,6 +84,16 @@ const std::string SceneBase::scene_type() const
     return pImpl_->scene_type_;
 }
 
+void SceneBase::set_scene_timer(std::shared_ptr<SceneTimer> obj)
+{
+    pImpl_->scene_timer_ = obj;
+}
+
+const std::shared_ptr<SceneTimer> SceneBase::scene_timer() const
+{
+    return pImpl_->scene_timer_;
+}
+
 const std::uint32_t SceneBase::player_count() const
 {
     return pImpl_->players_agent_.size();
@@ -86,6 +102,26 @@ const std::uint32_t SceneBase::player_count() const
 const std::map<uid_type, std::shared_ptr<Agent > > & SceneBase::players_agent() const
 {
     return pImpl_->players_agent_;
+}
+
+void SceneBase::NewTimer(long expires_from_now, SceneTimerContext::TimerType type, Seat * seat)
+{
+    const auto err = pImpl_->scene_timer_->NewTimer(
+        expires_from_now, boost::bind(&SceneBase::OnTimer, this, _1), scene_id(), type, seat);
+    if (err != 0)
+    {
+        EventTimerContext id(boost::bind(&SceneBase::OnTimer, this, _1), scene_id(), type, seat);
+        pImpl_->scene_timer_->CancelTimer(id);
+
+        pImpl_->scene_timer_->NewTimer(expires_from_now, boost::bind(&SceneBase::OnTimer, this, _1),
+            scene_id(), type, seat);
+    }
+}
+
+bool SceneBase::CancelTimer(SceneTimerContext::TimerType type, Seat * seat)
+{
+    EventTimerContext id(boost::bind(&SceneBase::OnTimer, this, _1), scene_id(), type, seat);
+    return pImpl_->scene_timer_->CancelTimer(id);
 }
 
 SceneBaseImpl::SceneBaseImpl()

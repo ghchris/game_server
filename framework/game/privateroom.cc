@@ -195,8 +195,34 @@ void PrivateRoom::OnGameOver(HuType type)
 
 void PrivateRoom::OnDisbandRoom()
 {
+    auto players = players_agent();
+    if (0 == pImpl_->played_num_)
+    {
+        auto room_owner_mid = room_owner();
+        auto iter = players.find(room_owner_mid);
+        if (iter != players.end())
+        {
+            iter->second->GoldPay(-room_conifg_data()->cost, 5);
+        }
+        else
+        {
+            DLOG(ERROR) << "DisbandRoom: room_owner not in scene mid:=" << room_owner_mid;
+        }
+    }
+
+    assistx2::Stream package(SERVER_BROADCAST_DISBAND_ROOM);
+    package.End();
+    BroadCast(package);
+
+    for (auto iter : players)
+    {
+        Leave(iter.second);
+    }
+
+    set_room_state(RoomBase::RoomState::CLOSED);
     pImpl_->banker_seatno_ = Table::INVALID_SEAT;
     pImpl_->played_num_ = 0;
+    set_room_owner(0);
     SceneManager::getInstance()->DetachActivedPrivateRoom(this);
 }
 
@@ -253,15 +279,16 @@ void PrivateRoomImpl::RoomSnapShot(std::shared_ptr<Agent > player)
         packet.Write(member_fides->name());
         packet.Write(member_fides->icon());
 
-        DLOG(INFO) << "RoomSnapShot mid:=" << iter.second->uid() << ", seatno:=" << iter.second->seat_no()
-            << ", gp:=" << member_fides->gp() << ", sex:=" << member_fides->sex() 
-            << ", name:=" << member_fides->name()<< ", icon:=" << member_fides->icon();
+//         DLOG(INFO) << "RoomSnapShot roomid:=" << owner_->scene_id() << ",mid:=" 
+//             << iter.second->uid() << ", seatno:=" << iter.second->seat_no() << ", gp:=" 
+//             << member_fides->gp() << ", sex:=" << member_fides->sex() << ", name:=" 
+//             << member_fides->name()<< ", icon:=" << member_fides->icon();
     }
     packet.Write(banker_seatno_);
     packet.End();
 
     DLOG(INFO) << "RoomSnapShot roomid:=" << owner_->scene_id() << ",room_owner:=" << owner_->room_owner()
-        << ",room_state:=" << static_cast<std::int32_t>(owner_->room_owner()) << ",played_num_:=" << played_num_
+        << ",room_state:=" << static_cast<std::int32_t>(owner_->room_state()) << ",played_num_:=" << played_num_
         << ",ju:=" << owner_->room_conifg_data()->ju << ",banker_seatno_:=" << banker_seatno_;
 
     player->SendTo(packet);
@@ -280,9 +307,9 @@ void PrivateRoomImpl::TableSnapShot(std::shared_ptr<Agent > player)
             packet.Write(static_cast<std::int32_t>(iter->seat_player_state()));
             packet.Write(iter->data()->seat_score_);
 
-            DLOG(INFO) << "TableSnapShot(): mid:=" << iter->player()->uid() << ",seatno:=" 
-                << iter->seat_no() << ",seat_player_state:=" << iter->seat_player_state()
-                << ",room_score_:" << iter->data()->seat_score_;
+            DLOG(INFO) << "TableSnapShot(): roomid:=" << owner_->scene_id() << ",mid:=" 
+                << iter->player()->uid() << ",seatno:="<< iter->seat_no() << ",seat_player_state:=" 
+                << iter->seat_player_state() << ",room_score_:" << iter->data()->seat_score_;
         }
     }
     packet.End();
@@ -391,6 +418,9 @@ void PrivateRoomImpl::StartGame()
 
     played_num_ += 1;
 
+    DLOG(INFO) << "StartGame roomid:=" << owner_->scene_id() << ",ju:=" 
+        << owner_->room_conifg_data()->ju << ",played_num_:=" << played_num_;
+
     auto err = ERROR_CODE_SUCCESS;
     if (owner_->room_conifg_data()->ju - played_num_ < 0)
     {
@@ -409,7 +439,10 @@ void PrivateRoomImpl::StartGame()
     }
 
     auto type = static_cast<CardGenerator::Type>(owner_->room_conifg_data()->type[0] - 0x30);
-    DLOG(INFO) << "StartGame: roomid:=" << owner_->scene_id() << ",type:=" << static_cast<std::int32_t>(type);
+
+    DLOG(INFO) << "StartGame: roomid:=" << owner_->scene_id() << 
+        ",type:=" << static_cast<std::int32_t>(type);
+
     card_generator_->Reset(type);
 
     owner_->OnGameStart();
@@ -417,29 +450,5 @@ void PrivateRoomImpl::StartGame()
 
 void PrivateRoomImpl::DisbandRoom()
 {
-    auto players = owner_->players_agent();
-    if (played_num_ == owner_->room_conifg_data()->ju)
-    {
-        auto room_owner = owner_->room_owner();
-        auto iter = players.find(room_owner);
-        if (iter != players.end())
-        {
-            iter->second->GoldPay(-owner_->room_conifg_data()->cost,5);
-        }
-        else
-        {
-            DLOG(ERROR) << "DisbandRoom: room_owner not in scene mid:=" << room_owner;
-        }
-    }
-
-    assistx2::Stream package(SERVER_BROADCAST_DISBAND_ROOM);
-    package.End();
-    owner_->BroadCast(package);
-
     owner_->OnDisbandRoom();
-
-    for (auto iter : players)
-    {
-        owner_->Leave(iter.second);
-    }
 }

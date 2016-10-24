@@ -5,6 +5,8 @@
 #include "GameHall.h"
 #include "gameconfigdata.h"
 #include "hzmajiangroom.h"
+#include "robotmanager.h"
+#include "scenetimer.h"
 
 class SceneManagerImpl
 {
@@ -40,9 +42,20 @@ SceneManager::~SceneManager()
     pImpl_->rooms_.clear();
 }
 
-bool SceneManager::Initialize()
+bool SceneManager::Initialize(boost::asio::io_service & ios)
 {
+    auto scene_timer = std::make_shared<SceneTimer>(ios);
+    if (scene_timer == nullptr || scene_timer->Init() != 0)
+    {
+        return false;
+    }
+
     pImpl_->game_hall_ = new GameHall;
+    if (pImpl_->game_hall_ != nullptr)
+    {
+        pImpl_->game_hall_->set_scene_timer(scene_timer);
+    }
+
 
     GameConfigData::getInstance()->Init(); 
 
@@ -56,6 +69,7 @@ bool SceneManager::Initialize()
             {
                 room = new HzMajiangRoom(i,iter->type);
                 room->set_room_config_data(iter);
+                room->set_scene_timer(scene_timer);
             }
             else
             {
@@ -117,6 +131,7 @@ void SceneManager::AttachActivedPrivateRoom(RoomBase* room)
     {
         pImpl_->actived_private_rooms_.insert(std::make_pair(
             room->scene_id(),room));
+        RobotManager::getInstance()->AttachRobot(room);
     }
     else
     {

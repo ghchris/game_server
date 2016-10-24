@@ -12,6 +12,8 @@
 #include "configmgr.h"
 #include "playeragent.h"
 #include "scenemanager.h"
+#include "robotmanager.h"
+#include "timerhelper.h"
 
 //ÓÃ»§µÇÂ¼
 const static std::int16_t CLIENT_REQUEST_LOGIN = 1000;
@@ -58,6 +60,8 @@ bool WatchDog::Initialize()
 
     pImpl_->run_id_ = ss.str();
 
+    GlobalTimerProxy::getInstance()->Init(pImpl_->io_service_);
+
     auto reader = ConfigMgr::getInstance()->app_config_obj();
 
     std::string host;
@@ -81,7 +85,9 @@ bool WatchDog::Initialize()
     pImpl_->gateway_connector_->Connect(host, static_cast<unsigned short>(assistx2::atoi_s(port)));
 
    
-    SceneManager::getInstance()->Initialize();
+    SceneManager::getInstance()->Initialize(pImpl_->io_service_);
+
+    RobotManager::getInstance()->Initialize(this);
 
     return true;
 }

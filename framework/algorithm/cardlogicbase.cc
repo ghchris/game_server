@@ -33,7 +33,7 @@ bool CardLogicBase::CheckPeng(const std::shared_ptr<Card> card,
 {
     DLOG(INFO) << "CheckPeng card:" << card->getName()
         << ",cards:=" << cardgroup->hand_cards();
-    if (cardgroup->card_count(card) == 2)
+    if (cardgroup->card_count(card) >= 2)
     {
         return true;
     }

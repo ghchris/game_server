@@ -7,6 +7,9 @@
 
 namespace assistx2 {
     class Stream;
+    namespace timer2 {
+        class TimerContext;
+    }
 }
 
 class Agent;

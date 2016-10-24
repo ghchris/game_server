@@ -28,7 +28,9 @@ AgentBase::AgentBase(const AgentType type):
 
 AgentBase::~AgentBase()
 {
-
+    DLOG(INFO) << "mid:=" << uid()
+        << " connect_status:=" << connect_status()
+        << " Has been Destroyed!";
 }
 
 bool AgentBase::Serialize(bool loadorsave)

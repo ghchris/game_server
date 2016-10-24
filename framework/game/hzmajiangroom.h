@@ -11,6 +11,8 @@ public:
     virtual ~HzMajiangRoom();
 
     virtual std::int32_t OnMessage(std::shared_ptr<Agent > player, assistx2::Stream * packet);
+    void set_zhama_num(const std::int32_t value);
+    void set_support_7dui(const bool value);
 protected:
     virtual void OnGameStart();
     virtual void OnGameOver(HuType type);

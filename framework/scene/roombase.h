@@ -29,6 +29,9 @@ public:
 
     void set_table_obj(std::shared_ptr<Table> obj);
     std::shared_ptr<Table> table_obj();
+
+    void set_create_time(const time_t time);
+    const time_t create_time() const;
 private:
     std::unique_ptr< RoomBaseImpl > pImpl_;
 };

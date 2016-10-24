@@ -5,7 +5,7 @@
 #include "playeragent.h"
 #include "GameHall.h"
 #include "scenemanager.h"
-#include "roombase.h"
+#include "hzmajiangroom.h"
 #include "gameconfigdata.h"
 #include "table.h"
 
@@ -30,8 +30,7 @@ public:
     void OnCreateRoom(std::shared_ptr<Agent > player, assistx2::Stream * packet);
     void OnEnterRoom(std::shared_ptr<Agent > player, assistx2::Stream * packet);
     void SendErrorCode(std::shared_ptr<Agent > player, const std::int16_t cmd,const std::int32_t err);
-    bool CheckParam(std::string type,std::int32_t param1, std::int32_t param2, 
-        std::int32_t param3, std::int32_t param4);
+    void SetRoomParam(const std::string& type,RoomBase* room, assistx2::Stream * packet);
 public:
     GameHall* owner_;
 };
@@ -106,10 +105,6 @@ void GameHallImpl::OnCreateRoom(std::shared_ptr<Agent > player, assistx2::Stream
 {
     const std::string type = packet->Read<std::string>();
     const std::int32_t ju = packet->Read<std::int32_t>();
-    //const std::int32_t players = packet->Read<std::int32_t>();
-    //const std::int32_t playe_type = packet->Read<std::int32_t>();
-    //const std::int32_t game_type = packet->Read<std::int32_t>();
-    //const std::int32_t zhuaniao = packet->Read<std::int32_t>();
 
     auto room = SceneManager::getInstance()->GetRoomByType(type, ju);
     if (room == nullptr)
@@ -124,8 +119,8 @@ void GameHallImpl::OnCreateRoom(std::shared_ptr<Agent > player, assistx2::Stream
         return;
     }
 
-    room->set_table_obj(std::make_shared<Table>(2));
-
+    SetRoomParam(type,room, packet);
+    
     room->set_room_owner(player->uid());
     auto res = room->Enter(player);
     if (res <= 0)
@@ -137,9 +132,13 @@ void GameHallImpl::OnCreateRoom(std::shared_ptr<Agent > player, assistx2::Stream
         room->set_room_owner(0);
         return;
     }
-
+    else
+    {
+        owner_->Leave(player);
+        player->set_scene_object(room);
+    }
+    room->set_create_time(time(nullptr));
     room->set_room_state(RoomBase::RoomState::WAITING);
-    player->set_scene_object(room);
     SceneManager::getInstance()->AttachActivedPrivateRoom(room);
 }
 
@@ -160,7 +159,11 @@ void GameHallImpl::OnEnterRoom(std::shared_ptr<Agent > player, assistx2::Stream 
             << " roomid:=" << room->scene_id();
         return;
     }
-    player->set_scene_object(room);
+    else
+    {
+        owner_->Leave(player);
+        player->set_scene_object(room);
+    }
 }
 
 void GameHallImpl::OnClientClose(std::shared_ptr<Agent > player)
@@ -181,20 +184,23 @@ void GameHallImpl::SendErrorCode(std::shared_ptr<Agent > player,
     player->SendTo(stream);
 }
 
-bool GameHallImpl::CheckParam(std::string type, std::int32_t param1, std::int32_t param2,
-    std::int32_t param3, std::int32_t param4)
+void GameHallImpl::SetRoomParam(const std::string& type, RoomBase* room, assistx2::Stream * packet)
 {
+    const std::int32_t players = packet->Read<std::int32_t>();
+    const std::int32_t playe_type = packet->Read<std::int32_t>();
+    const std::int32_t operation = packet->Read<std::int32_t>();
+    const std::int32_t zhuaniao = packet->Read<std::int32_t>();
+    DLOG(ERROR) << "GameHallImpl::SetRoomParam: roomid:="<< room->scene_id() << "players:=" 
+        << players << ",playe_type:=" << playe_type<< ",operation:=" << operation << ",zhuaniao" << zhuaniao;
+
     if (type == "1")
     {
-        if (param1 != 4)
+        auto hzroom = dynamic_cast<HzMajiangRoom*>(room);
+        hzroom->set_table_obj(std::make_shared<Table>(4));
+        if (operation == 1)
         {
-            return false;
+            hzroom->set_support_7dui(true);
         }
-        if (param4 > 6)
-        {
-            return false;
-        }
+        hzroom->set_zhama_num(zhuaniao);
     }
-   
-    return true;
 }
