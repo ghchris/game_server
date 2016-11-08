@@ -112,7 +112,7 @@ Seat* Table::GetBySeatNo(std::int32_t seatno)
     return pImpl_->seats_.at(seatno - 1);
 }
 
-std::int32_t Table::player_count()
+const std::int32_t Table::player_count() const
 {
     return pImpl_->player_count_;
 }

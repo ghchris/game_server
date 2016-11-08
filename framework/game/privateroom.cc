@@ -23,12 +23,15 @@ const static std::int16_t SERVER_BROADCAST_PLAYER_RECONNECT = 1006;
 const static std::int16_t SERVER_BROADCAST_GAME_START = 1007;
 const static std::int16_t CLEINT_REQUEST_DISBAND_ROOM = 1008;
 const static std::int16_t SERVER_BROADCAST_DISBAND_ROOM = 1008;
+const static std::int16_t CLEINT_REQUEST_LEAVE_ROOM = 1009;
+const static std::int16_t SERVER_RESPONSE_LEAVE_ROOM = 1009;
 
 const static std::int16_t NET_CONNECT_CLOSED = 1999;
 
 const static std::int32_t ERROR_CODE_SUCCESS = 0; 
 const static std::int32_t ERROR_CODE_GAEME_NUM_ENOUGH = -1000; //游戏次数不足
-
+const static std::int32_t ERROR_CODE_ROOM_ALREADY_USED = -1001;//房间已使用不能离开
+const static std::int32_t ERROR_CODE_LEAVE_ROOM_OWNNER = -1002;//房主不能离开
 class PrivateRoomImpl
 {
 public:
@@ -40,15 +43,19 @@ public:
     void BroadCastOnEnterPlayer(std::shared_ptr<Agent > player);
     void ReConnect(std::shared_ptr<Agent > player);
     void StartGame();
-    void DisbandRoom();
+    
 public:
     void OnClientClose(std::shared_ptr<Agent > player);
     void OnReady(std::shared_ptr<Agent > player);
+    void OnLeave(std::shared_ptr<Agent > player);
+    void OnRequestDisbandRoom(std::shared_ptr<Agent > player);
 public:
     PrivateRoom* owner_ = nullptr;
     std::int32_t banker_seatno_ = Table::INVALID_SEAT;//庄家座位号
-    std::int32_t played_num_ = 0;
-    std::shared_ptr<CardGenerator> card_generator_;
+    std::int32_t played_num_ = 0;//已完的次数
+    std::shared_ptr<CardGenerator> card_generator_;//发牌器
+    std::int32_t disband_author_ = 0;//解散房间发起者mid
+    time_t disband_start_time_ = 0;//解散房间发起时间
 };
 
 PrivateRoom::PrivateRoom(std::uint32_t id, std::string type) :
@@ -73,12 +80,16 @@ std::int32_t PrivateRoom::OnMessage(std::shared_ptr<Agent > player, assistx2::St
     {
     case NET_CONNECT_CLOSED:
         pImpl_->OnClientClose(player);
-        return 0;
+        break;
     case CLIENT_READY_CMD:
         pImpl_->OnReady(player);
-        return 0;
+        break;
     case CLEINT_REQUEST_DISBAND_ROOM:
-        pImpl_->DisbandRoom();
+        pImpl_->OnRequestDisbandRoom(player);
+        break;
+    case CLEINT_REQUEST_LEAVE_ROOM:
+        pImpl_->OnLeave(player);
+        break;
     default:
         break;
     }
@@ -222,6 +233,8 @@ void PrivateRoom::OnDisbandRoom()
     set_room_state(RoomBase::RoomState::CLOSED);
     pImpl_->banker_seatno_ = Table::INVALID_SEAT;
     pImpl_->played_num_ = 0;
+    pImpl_->disband_author_ = 0;
+    pImpl_->disband_start_time_ = 0;
     set_room_owner(0);
     SceneManager::getInstance()->DetachActivedPrivateRoom(this);
 }
@@ -285,11 +298,14 @@ void PrivateRoomImpl::RoomSnapShot(std::shared_ptr<Agent > player)
 //             << member_fides->name()<< ", icon:=" << member_fides->icon();
     }
     packet.Write(banker_seatno_);
+    auto& seats = owner_->table_obj()->GetSeats();
+    packet.Write(static_cast<std::int32_t>(seats.size()));
     packet.End();
 
     DLOG(INFO) << "RoomSnapShot roomid:=" << owner_->scene_id() << ",room_owner:=" << owner_->room_owner()
         << ",room_state:=" << static_cast<std::int32_t>(owner_->room_state()) << ",played_num_:=" << played_num_
-        << ",ju:=" << owner_->room_conifg_data()->ju << ",banker_seatno_:=" << banker_seatno_;
+        << ",ju:=" << owner_->room_conifg_data()->ju << ",banker_seatno_:=" << banker_seatno_ << ",max_seats:="
+        << seats.size();
 
     player->SendTo(packet);
 }
@@ -400,6 +416,54 @@ void PrivateRoomImpl::OnReady(std::shared_ptr<Agent > player)
     StartGame();
 }
 
+void PrivateRoomImpl::OnLeave(std::shared_ptr<Agent > player)
+{
+    auto err = 0;
+    if (player->uid() == owner_->room_owner())
+    {
+        err = ERROR_CODE_LEAVE_ROOM_OWNNER;
+    }
+
+    if (played_num_ != 0 ||
+        owner_->room_state() == RoomBase::RoomState::PLAYING)
+    {
+        err = ERROR_CODE_ROOM_ALREADY_USED;
+    }
+
+    assistx2::Stream package(SERVER_RESPONSE_LEAVE_ROOM);
+    package.Write(err);
+    package.End();
+
+    if (err != 0)
+    {
+        player->SendTo(package);
+    }
+    else
+    {
+        owner_->Leave(player);
+        owner_->BroadCast(package, player);
+    }
+}
+
+void PrivateRoomImpl::OnRequestDisbandRoom(std::shared_ptr<Agent > player)
+{
+    auto now_players = owner_->table_obj()->player_count();
+    auto max_seats = owner_->table_obj()->GetSeats().size();
+    if (now_players < static_cast<std::int32_t>(max_seats));
+    {
+        owner_->OnDisbandRoom();
+        return;
+    }
+
+    if (disband_author_ == 0)
+    {
+        disband_author_ = player->uid();
+        disband_start_time_ = time(nullptr);
+    }
+
+    owner_->OnDisbandRoom();
+}
+
 void PrivateRoomImpl::StartGame()
 {
     auto& seats = owner_->table_obj()->GetSeats();
@@ -446,9 +510,4 @@ void PrivateRoomImpl::StartGame()
     card_generator_->Reset(type);
 
     owner_->OnGameStart();
-}
-
-void PrivateRoomImpl::DisbandRoom()
-{
-    owner_->OnDisbandRoom();
 }

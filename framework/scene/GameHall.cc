@@ -196,7 +196,7 @@ void GameHallImpl::SetRoomParam(const std::string& type, RoomBase* room, assistx
     if (type == "1")
     {
         auto hzroom = dynamic_cast<HzMajiangRoom*>(room);
-        hzroom->set_table_obj(std::make_shared<Table>(4));
+        hzroom->set_table_obj(std::make_shared<Table>(players));
         if (operation == 1)
         {
             hzroom->set_support_7dui(true);

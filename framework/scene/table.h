@@ -20,10 +20,14 @@ public:
     //seatno默认为0时，自动分配座位
     std::int32_t Enter(std::shared_ptr<Agent> player, const std::int32_t seatno = INVALID_SEAT);
     std::int32_t Leave(std::shared_ptr<Agent> player);
+
     Seat* GetByUid(uid_type uid);
     Seat* GetBySeatNo(std::int32_t seatno);
+
     const std::vector< Seat* >& GetSeats() const;
-    std::int32_t player_count();
+
+    const std::int32_t player_count() const;
+
     Seat* next_seat(std::int32_t seatno);
     Seat* prev_seat(std::int32_t seatno);
 private:

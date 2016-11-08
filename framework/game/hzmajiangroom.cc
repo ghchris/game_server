@@ -611,7 +611,14 @@ void HzMajiangRoomImpl::OnGang(std::shared_ptr<Agent > player, assistx2::Stream 
             seat->data()->beiqiang_hu_num_ += 1;
             return;
         }
-        seat->data()->operated_cards_.erase(card);
+        auto iter = std::find_if(seat->data()->operated_cards_.begin(), seat->data()->operated_cards_.end(), 
+            [card](const std::pair<std::shared_ptr<Card>,OperCardsType> value) {
+            return card->getName() == value.first->getName();
+        });
+        if (iter != seat->data()->operated_cards_.end())
+        {
+            seat->data()->operated_cards_.erase(iter);
+        }
         seat->data()->gang_gong_num_ += 1;
         CalculateScore(seatno,1);
     }
@@ -655,19 +662,13 @@ void HzMajiangRoomImpl::OnHu(std::shared_ptr<Agent > player, assistx2::Stream * 
 
     seat->data()->zimo_num_ += 1;
 
-    auto& seats = owner_->table_obj()->GetSeats();
     assistx2::Stream stream(SERVER_BROADCAST_HU_CARD);
     stream.Write(seatno);
-    stream.Write(owner_->table_obj()->player_count());
-    for (auto iter : seats)
+    auto hand_cards = seat->data()->hand_cards_->hand_cards();
+    stream.Write(static_cast<std::int32_t>(hand_cards.size()));
+    for (auto it : hand_cards)
     {
-        auto hand_cards = iter->data()->hand_cards_->hand_cards();
-        stream.Write(iter->seat_no());
-        stream.Write(static_cast<std::int32_t>(hand_cards.size()));
-        for (auto it : hand_cards)
-        {
-            stream.Write(it->getName());
-        }
+        stream.Write(it->getName());
     }
     stream.End();
 
@@ -853,21 +854,15 @@ bool HzMajiangRoomImpl::FindQiangGangHu(std::int32_t seatno, std::shared_ptr<Car
         {
             hu_card_ = card;
             hu_players_.push_back(iter->seat_no());
-            auto& seats = owner_->table_obj()->GetSeats();
             assistx2::Stream stream(SERVER_BROADCAST_QIANGGANG_HU);
             stream.Write(iter->seat_no());
             stream.Write(seatno);
             stream.Write(card->getName());
-            stream.Write(owner_->table_obj()->player_count());
-            for (auto seat_iter : seats)
+            auto hand_cards = iter->data()->hand_cards_->hand_cards();
+            stream.Write(static_cast<std::int32_t>(hand_cards.size()));
+            for (auto it : hand_cards)
             {
-                auto hand_cards = seat_iter->data()->hand_cards_->hand_cards();
-                stream.Write(seat_iter->seat_no());
-                stream.Write(static_cast<std::int32_t>(hand_cards.size()));
-                for (auto it : hand_cards)
-                {
-                    stream.Write(it->getName());
-                }
+                stream.Write(it->getName());
             }
             stream.End();
 
@@ -905,14 +900,14 @@ void HzMajiangRoomImpl::MoCard(std::shared_ptr<Agent > player)
     assistx2::Stream package(SERVER_NOTIFY_MO_CARD);
     package.Write(seatno);
     package.Write(card->getName());
-    package.Write(cardcount);
+    package.Write(cardcount - 1);
     package.End();
 
     player->SendTo(package);
 
     assistx2::Stream stream(SERVER_BROADCAST_PLAYER_MO);
     stream.Write(seatno);
-    stream.Write(cardcount);
+    stream.Write(cardcount - 1);
     stream.End();
 
     owner_->BroadCast( stream, player);
