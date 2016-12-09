@@ -81,6 +81,10 @@ void RobotManager::RecoverRobot(std::shared_ptr<Agent > robot)
 
 void RobotManager::AttachRobot(RoomBase* room)
 {
+    if (room->room_state() == RoomBase::RoomState::CLOSED)
+    {
+        return;
+    }
     auto seat_num = static_cast<std::int32_t>( 
         room->table_obj()->GetSeats().size());
     auto player_num = room->table_obj()->player_count();

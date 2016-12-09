@@ -1,14 +1,14 @@
-#ifndef FRAMEWORK_GAME_HZMAJIANGROOM_H_
-#define FRAMEWORK_GAME_HZMAJIANGROOM_H_
+#ifndef FRAMEWORK_GAME_ZHUANZHUANROOM_H_
+#define FRAMEWORK_GAME_ZHUANZHUANROOM_H_
 
 #include "privateroom.h"
 
-class HzMajiangRoomImpl;
-class HzMajiangRoom :public PrivateRoom
+class ZhuanZhuanRoomImpl;
+class ZhuanZhuanRoom :public PrivateRoom
 {
 public:
-    HzMajiangRoom(std::uint32_t id, std::string type);
-    virtual ~HzMajiangRoom();
+    ZhuanZhuanRoom(std::uint32_t id, std::string type);
+    virtual ~ZhuanZhuanRoom();
 
     virtual std::int32_t OnMessage(std::shared_ptr<Agent > player, assistx2::Stream * packet);
     virtual std::int32_t Disband();
@@ -18,6 +18,8 @@ public:
 
     void set_zhama_num(const std::int32_t value);
     void set_operation(const std::int32_t value);
+    void set_playtype(const std::int32_t value);
+    void set_playlogic(const std::int32_t value);
 protected:
     virtual void OnGameStart();
     virtual void OnGameOver();
@@ -25,8 +27,8 @@ protected:
     virtual void OnReConect(std::shared_ptr<Agent > player);
     virtual void OnTimer(boost::shared_ptr<assistx2::timer2::TimerContext > context);
 private:
-    friend class HzMajiangRoomImpl;
-    std::unique_ptr< HzMajiangRoomImpl > pImpl_;
+    friend class ZhuanZhuanRoomImpl;
+    std::unique_ptr< ZhuanZhuanRoomImpl > pImpl_;
 };
 
 #endif

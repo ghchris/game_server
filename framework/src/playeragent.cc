@@ -4,8 +4,13 @@
 #include "playeragent.h"
 #include "datalayer.h"
 #include <assistx2/tcphandler_wrapper.h>
+#include "logserver.h"
+#include "gamedatamanager.h"
 
 const static std::int16_t SERVER__UPDATE_GOLD = 1086;
+const static std::int16_t SERVER_BROADCAST_GAME_ACCOUNT = 1031;//单局结算
+const static std::int16_t SERVER_BROADCAST_ROOM_ACCOUNT = 1035;//服务器广播总结算
+const static std::int16_t SERVER_BROADCAST_HAS_BEEN_DISBAND = 1013;
 
 class PlayerAgentImpl
 {
@@ -64,13 +69,33 @@ bool PlayerAgent::Serialize(bool loadorsave)
     return true;
 }
 
-void PlayerAgent::SendTo(const assistx2::Stream& packet)
+void PlayerAgent::Process(assistx2::Stream * packet)
 {
+    const auto cmd = packet->GetCmd();
+    switch (cmd)
+    {
+    case SERVER_BROADCAST_GAME_ACCOUNT:
+    case SERVER_BROADCAST_ROOM_ACCOUNT:
+    case SERVER_BROADCAST_HAS_BEEN_DISBAND:
+        return GameDataManager::getInstance()->DeleteCmdStream(uid(),cmd);
+    default:
+        break;
+    }
+    
+    return AgentBase::Process(packet);
+}
+
+void PlayerAgent::SendTo(const assistx2::Stream& packet, bool needsave)
+{
+    assistx2::Stream clone(packet);
+    clone.Insert(uid());
+
+    if (needsave == true)
+    {
+        GameDataManager::getInstance()->SaveCmdStream(uid(),clone);
+    }
     if (connect_status() == true)
     {
-        assistx2::Stream clone(packet);
-        clone.Insert(uid());
-
         pImpl_->connector_->SendTo(clone.GetNativeStream());
     }
 }
@@ -90,6 +115,8 @@ bool PlayerAgent::GoldPay(const std::int64_t gold,
         pImpl_->member_common_game_.set_gold(amount);
 
         pImpl_->OnGoldChange();
+
+        LogServer::getInstance()->WriteGoldLog(uid(), -gold, amount, pay_type);
         return true;
     }
     else

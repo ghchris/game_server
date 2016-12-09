@@ -10,6 +10,8 @@ public:
     CardLogicBase();
     virtual ~CardLogicBase();
 
+    virtual bool CheckChi(const std::shared_ptr<Card> card,
+        const std::shared_ptr<CardGroup> cardgroup);
     virtual bool CheckPeng(const std::shared_ptr<Card> card,
         const std::shared_ptr<CardGroup> cardgroup) ;
     virtual bool CheckGang(const std::shared_ptr<Card> card,

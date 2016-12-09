@@ -105,6 +105,130 @@ std::int32_t DataLayer::Pay(const uid_type mid, const std::int64_t incr, std::in
     return err;
 }
 
+void DataLayer::set_room_data_to_cache(const std::int32_t roomid, const std::string& data)
+{
+    std::stringstream key;
+    key << "MAJIANGROOM|" << roomid;
+
+    if (data.empty() == false)
+    {
+        DLOG(INFO) << "set_room_data_to_cache:" << key.str() << ", " << data;
+
+        std::string value;
+        if (pImpl_->memcached_client_->get(key.str(), value) == true)
+        {
+            if (pImpl_->memcached_client_->replace(key.str(), data) == false)
+            {
+                LOG(INFO) << ("DataLayer::set_room_data_to_cache. FAILED.");
+            }
+        }
+        else
+        {
+            if (pImpl_->memcached_client_->set(key.str(), data) == false)
+            {
+                LOG(INFO) << ("DataLayer::set_room_data_to_cache. FAILED.");
+            }
+        }
+    }
+    else
+    {
+        DLOG(INFO) << "remove_room_data_to_cache:" << key.str() ;
+
+        if (pImpl_->memcached_client_->remove(key.str()) == false)
+        {
+            LOG(INFO) << ("DataLayer::remove_room_data_to_cache. FAILED.");
+        }
+    }
+}
+
+bool DataLayer::room_data_from_cache(const std::int32_t roomid, std::string& data)
+{
+    std::stringstream key;
+    key << "MAJIANGROOM|" << roomid;
+
+    if (pImpl_->memcached_client_->get(key.str(), data) == true)
+    {
+        if (data.empty())
+        {
+            pImpl_->memcached_client_->remove(key.str());
+            return false;
+        }
+        else
+        {
+            DLOG(INFO) << "room_data_from_cache:" << key.str() << ", " << data;
+            return true;
+        }
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void DataLayer::set_playing_player_to_cache(const uid_type mid, const std::int32_t session)
+{
+    std::stringstream key;
+    key << "PLAYERSTATUS|" << mid;
+
+    std::stringstream val;
+    val << session;
+
+    DLOG(INFO) << "set_playing_player_to_cache:" << key.str() << ", " << session;
+
+    std::string value;
+    if (pImpl_->memcached_client_->get(key.str(), value) == true)
+    {
+        if (pImpl_->memcached_client_->replace(key.str(), val.str()) == false)
+        {
+            LOG(INFO) << ("DataLayer::set_playing_player_to_cache. FAILED.");
+        }
+    }
+    else
+    {
+        if (pImpl_->memcached_client_->set(key.str(), val.str()) == false)
+        {
+            LOG(INFO) << ("DataLayer::set_playing_player_to_cache. FAILED.");
+        }
+    }
+}
+
+void DataLayer::remove_playing_player_from_cache(const uid_type mid)
+{
+    std::stringstream key;
+    key << "PLAYERSTATUS|" << mid;
+
+    DLOG(INFO) << "remove_playing_player_from_cache:" << key.str();
+
+    if (pImpl_->memcached_client_->remove(key.str()) == false)
+    {
+        LOG(INFO) << ("DataLayer::remove_playing_player_from_cache. FAILED.");
+    }
+}
+
+bool DataLayer::proxy_mid(const uid_type mid, std::string& data)
+{
+    std::stringstream key;
+    key << "ROPEN|" << mid;
+
+    if (pImpl_->memcached_client_->get(key.str(), data) == true)
+    {
+        if (data.empty())
+        {
+            pImpl_->memcached_client_->remove(key.str());
+            return false;
+        }
+        else
+        {
+            DLOG(INFO) << "proxy_mid:" << key.str() << ", " << data;
+            return true;
+        }
+    }
+    else
+    {
+        return false;
+    }
+}
+
 std::int32_t DataLayer::membercommongame(uid_type mid, MemberCommonGame& info, 
     bool forcedflush )
 {

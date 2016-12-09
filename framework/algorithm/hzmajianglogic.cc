@@ -32,11 +32,7 @@ bool HZMajiangLogic::CheckHu(const std::shared_ptr<Card> card,
     DLOG(INFO) << "CheckHu cards:" << cardgroup->hand_cards()
         << ",hz_count_:=" << pImpl_->hz_count_;
 
-    if (pImpl_->hz_count_ == 4)
-    {
-        return true;
-    }
-    else if (pImpl_->hz_count_ == 0)
+    if (pImpl_->hz_count_ == 0)
     {
         return IsHu();
     }

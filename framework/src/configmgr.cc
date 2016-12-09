@@ -21,6 +21,7 @@ public:
     std::int32_t server_id_ = 0;
     std::string pid_file_path_;
     DBConfig_type db_config_;
+    std::string version_;
 };
 
 ConfigMgr::ConfigMgr(void):
@@ -74,6 +75,11 @@ const DBConfig_type& ConfigMgr::db_config() const
     return pImpl_->db_config_;
 }
 
+const std::string ConfigMgr::server_version() const
+{
+    return pImpl_->version_;
+}
+
 ConfigMgrImpl::ConfigMgrImpl()
 {
 }
@@ -104,6 +110,8 @@ void ConfigMgrImpl::LoadAppConfig()
     app_config_obj_->getConfig("APP", "SID", server_id_);
 
     app_config_obj_->getConfig("APP", "PID", pid_file_path_);
+
+    app_config_obj_->getConfig("APP", "VERSION", version_);
 
     TiXmlElement * pGameItems = app_config_obj_->GetElement("DB");
     if (pGameItems != nullptr)

@@ -47,12 +47,12 @@ void AgentBase::Process(assistx2::Stream * packet)
     }
     else
     {
-        DLOG(ERROR) << "AgentBase::Process: mid:="
+        LOG(ERROR) << "AgentBase::Process: mid:="
             << uid() << " Now Not In Any Scene!";
     }
 }
 
-void AgentBase::SendTo(const assistx2::Stream& packet)
+void AgentBase::SendTo(const assistx2::Stream& packet, bool needsave)
 {
     //do nothing
 }

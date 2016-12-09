@@ -14,12 +14,16 @@ public:
         PENG_OPERA = 101,        //碰牌操作
         GANG_OPERA = 102,       //杠牌操作
         HUPAI_OPERA = 103,      //胡牌操作
-        CANCLE_OPERA = 104    //取消操作
+        CANCLE_OPERA = 104,    //取消操作
+        MO_OPERA = 105,           //摸牌操作
+        CHI_OPERA = 106,           //吃牌操作
     };
 public:
     CardLogic() {}
     virtual ~CardLogic() {}
 
+    virtual bool CheckChi(const std::shared_ptr<Card> /**/,
+        const std::shared_ptr<CardGroup> /**/) = 0;
     virtual bool CheckPeng(const std::shared_ptr<Card> /**/, 
         const std::shared_ptr<CardGroup> /**/) = 0;
     virtual bool CheckGang(const std::shared_ptr<Card> /**/,

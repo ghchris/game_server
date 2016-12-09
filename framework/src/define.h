@@ -14,6 +14,8 @@ const static std::int16_t SERVER_RESPONSE_REGISTER = 10000;
 
 //standard. 标准路由包
 const static std::int16_t STANDARD_ROUTE_PACKET = 10002;
+//系统管理指令 ｛0， 关闭服务器， 1， 重启加载配置文件｝
+const static std::int16_t SYSTEM_ADMINI_CMD = 10004;
 
 static const std::int32_t	SESSION_TYPE_BEGIN = 0;
 static const std::int32_t	SESSION_TYPE_AS_CLINET = 1;			//AS客户端连接

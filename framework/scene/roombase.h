@@ -17,6 +17,10 @@ public:
 
     virtual std::int32_t Enter(std::shared_ptr<Agent > player);
     virtual std::int32_t Leave(std::shared_ptr<Agent > player);
+    virtual std::int32_t Disband();
+
+    virtual std::string RoomDataToString(bool isContainTableData);
+    virtual void StringToRoomData(const std::string& str);
 
     void set_room_state(const RoomState& state);
     const RoomState& room_state() const;

@@ -21,7 +21,13 @@ public:
         Eight,
         Nine,
         HongZ,
-        LastFace = HongZ
+        FaZ,
+        BaiZ,
+        DongF,
+        NanF,
+        XiF,
+        BeiF,
+        LastFace = BeiF
     };
 
     enum Type
@@ -30,8 +36,9 @@ public:
         Tong = 1,         //Í²
         Suo,                 //Ë÷
         Wan,                //Íò
-        Zi,
-        LastType = Zi
+        Zi,                    //×ÖÅÆ
+        Feng,               //Feng
+        LastType = Feng
     };
 public:
     Card() {}

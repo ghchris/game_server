@@ -19,6 +19,9 @@ public:
     enum TimerType
     {
         DELAY_BROADCAST_TIMER,//延迟广播时间
+        MAJIANG_MOPAI,               //摸牌
+        MAJIANG_GAMEOVER,       //游戏结束
+        MAJIANG_DISBAND,          //解散房间
     };
 
 public:

@@ -3,12 +3,13 @@
 #include <assistx2/tcphandler_wrapper.h>
 #include <json_spirit_writer_template.h>
 #include <assistx2/json_wrapper.h>
-#include "hzmajiangroom.h"
+#include <functional>
+#include "zhuanzhuanroom.h"
 #include "table.h"
 #include "seat.h"
 #include "cardgenerator.h"
 #include "seatdata.h"
-#include "hzmajianglogic.h"
+#include "zzmajianglogic.h"
 #include "agent.h"
 #include "cardgroup.h"
 #include "gameconfigdata.h"
@@ -17,6 +18,7 @@
 #include "gamedatamanager.h"
 #include "logserver.h"
 #include "common.h"
+#include "zzmajianglogic_twoplayer.h"
 
 const static std::int16_t SERVER_BROADCAST_ON_DEAL = 1020;//发牌
 const static std::int16_t SERVER_BROADCAST_NEXT_PLAYER = 1021;//下个出牌人
@@ -39,13 +41,14 @@ const static std::int16_t SERVER_BROADCAST_PLAYER_MO = 1033;//服务器广播哪个玩家
 const static std::int16_t SERVER_BROADCAST_PLAYER_HANDCARD = 1034;//服务器广播玩家手上的牌数
 const static std::int16_t SERVER_BROADCAST_ROOM_ACCOUNT = 1035;//服务器广播总结算
 
-const static std::int32_t YI_MA_QUAN_ZHONG = 1;//一码全中
+const static std::int32_t TYPE_DIANPAO_HU = 0;
+const static std::int32_t TYPE_ZIMO_HU = 1;
 
-class HzMajiangRoomImpl
+class ZhuanZhuanRoomImpl
 {
 public:
-    HzMajiangRoomImpl(HzMajiangRoom* owner);
-    ~HzMajiangRoomImpl();
+    ZhuanZhuanRoomImpl(ZhuanZhuanRoom* owner);
+    ~ZhuanZhuanRoomImpl();
     void BroadCastNextPlayer(std::int32_t seatno);
     void NotifyOperation(std::int32_t seatno,
         std::vector<CardLogic::OperationType> operate);
@@ -59,17 +62,26 @@ public:
     void MoCard(std::shared_ptr<Agent > player);
     void CalculateScore(std::int32_t seatno, std::int32_t score);
     void ZhaNiao();
-    void ZhaNiao_YiMaQuanZhong();
     bool CheckHu(const std::shared_ptr<Card> card,Seat* seat);
     void IncrMingtang(Seat* seat,MingTangType type);
     std::int32_t GetZhongNiaoNum(std::int32_t seatno);
-    std::int32_t GetZhongNiaoScore(std::int32_t seatno);
     void ClearGameData();
     void ClearRoomData();
     void NotifyTableData(std::shared_ptr<Agent > player);
-    bool NotHaveHongZhong(Seat* seat);
     void RoomAccount();
-    void CheckQSHu(std::int32_t seatno, std::vector<CardLogic::OperationType>& operation);
+    bool IsZhuangXianCalculateScore();
+    void CheckQSHu(std::int32_t seatno, 
+        std::vector<CardLogic::OperationType>& operation);
+    void AddHuPlayerOperation(const std::int32_t seatno);
+    void RemoveHuPlayerOperation(const std::int32_t seatno);
+    void DoPeng(Seat* seat, std::string card);
+    void DoGang(Seat* seat, std::string card);
+    void DoZiMoHu(Seat* seat, std::string card);
+    void DoDianPaoHu(Seat* seat, std::string card);
+    void DoGongGang(Seat* seat, std::string card);
+    void AddZhongMaSeats(const std::int32_t seatno,const std::shared_ptr<Card> card);
+    bool CanGang(const std::shared_ptr<Card> card);
+    bool IsNoOperator();
 public:
     void OnPlay(std::shared_ptr<Agent > player, assistx2::Stream * packet);
     void OnPeng(std::shared_ptr<Agent > player, assistx2::Stream * packet);
@@ -77,7 +89,7 @@ public:
     void OnHu(std::shared_ptr<Agent > player, assistx2::Stream * packet);
     void OnCancle(std::shared_ptr<Agent > player, assistx2::Stream * packet);
 public:
-    HzMajiangRoom* owner_;
+    ZhuanZhuanRoom* owner_;
     std::int32_t active_player_ = Table::INVALID_SEAT;//当前激活的玩家座位号(房间里的玩家都能看见)
     std::int32_t now_operator_ = Table::INVALID_SEAT;//当前操作座位号(只有自己才能看见)
     std::int32_t now_played_seatno_ = Table::INVALID_SEAT;//当前打出牌的座位号
@@ -85,63 +97,75 @@ public:
     std::int32_t beiqiang_seat_ = Table::INVALID_SEAT;//被抢杠的座位号
     std::shared_ptr<CardLogic> card_logic_;
     std::vector<std::int32_t> hu_players_;
-    std::int32_t zhama_num_ = 2;
+    std::int32_t zhama_num_ = 0;//扎码的个数 默认值0
     std::map<std::int32_t, std::vector<std::shared_ptr<Card>>> zhong_ma_seats_;
     std::shared_ptr<Card> hu_card_ = nullptr;//胡的牌
-    std::int32_t room_operation_ = 0;//房间选项 1为7对胡
-    std::vector<std::int32_t> zhama_value_{ 2,3,4 };
+    std::int32_t room_operation_ = 0;//房间选项 1为庄闲 2七对胡 4红中癞子
+    std::vector<std::int32_t> zhama_value_{4,6,8};
     std::vector<std::shared_ptr<Card>> vec_niao_;
     PrivateRoom::HuType hu_type_ = PrivateRoom::HuType::CHOUZHUANG;
     time_t now_active_time_ = 0;
-    bool is_yi_ma_quan_zhong_ = 0;
+    std::int32_t play_type_ = TYPE_DIANPAO_HU;//0 点炮胡 1 自模胡
+    std::vector<std::int32_t> hu_player_operation_;//点炮胡优先级判断
+    std::function<void(Seat*, std::string)> next_func_ = nullptr;
+    std::int32_t zhama_start_seatno_ = Table::INVALID_SEAT;//计算扎码的起始位置
+    std::vector<assistx2::Stream> hu_message_;
 };
 
-HzMajiangRoom::HzMajiangRoom(std::uint32_t id, std::string type):
+ZhuanZhuanRoom::ZhuanZhuanRoom(std::uint32_t id, std::string type):
  PrivateRoom(id,type),
- pImpl_(new HzMajiangRoomImpl(this))
+ pImpl_(new ZhuanZhuanRoomImpl(this))
 {
-    pImpl_->card_logic_ = std::make_shared<HZMajiangLogic>();
+    pImpl_->card_logic_ = std::make_shared<ZZMajiangLogic>();
 }
 
-HzMajiangRoom::~HzMajiangRoom()
+ZhuanZhuanRoom::~ZhuanZhuanRoom()
 {
     
 }
 
-void HzMajiangRoom::set_zhama_num(const std::int32_t value)
+void ZhuanZhuanRoom::set_zhama_num(const std::int32_t value)
 {
-    if (value == YI_MA_QUAN_ZHONG)
+    auto iter = std::find_if(pImpl_->zhama_value_.begin(), pImpl_->zhama_value_.end(), 
+        [&value](const std::int32_t val) {
+        return value == val;
+    });
+    if (iter != pImpl_->zhama_value_.end())
     {
-        pImpl_->zhama_num_ = 1;
-        pImpl_->is_yi_ma_quan_zhong_ = true;
+        pImpl_->zhama_num_ = value;
     }
     else
     {
-        pImpl_->is_yi_ma_quan_zhong_ = false;
-        auto iter = std::find_if(pImpl_->zhama_value_.begin(), pImpl_->zhama_value_.end(),
-            [&value](const std::int32_t val) {
-            return value == val;
-        });
-        if (iter != pImpl_->zhama_value_.end())
-        {
-            pImpl_->zhama_num_ = value;
-        }
-        else
-        {
-            pImpl_->zhama_num_ = 2;
-        }
+        pImpl_->zhama_num_ = 0;
     }
 }
 
-void HzMajiangRoom::set_operation(const std::int32_t value)
+void ZhuanZhuanRoom::set_operation(const std::int32_t value)
 {
     pImpl_->room_operation_ = value;
 }
 
-std::int32_t HzMajiangRoom::OnMessage(std::shared_ptr<Agent > player, assistx2::Stream * packet)
+void ZhuanZhuanRoom::set_playtype(const std::int32_t value)
+{
+    pImpl_->play_type_ = value;
+}
+
+void ZhuanZhuanRoom::set_playlogic(const std::int32_t value)
+{
+    if (value == 2)
+    {
+        pImpl_->card_logic_ = std::make_shared<ZZMajiangLogicTwoPlayer>();
+    }
+    else
+    {
+        pImpl_->card_logic_ = std::make_shared<ZZMajiangLogic>();
+    }
+}
+
+std::int32_t ZhuanZhuanRoom::OnMessage(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
     auto cmd = packet->GetCmd();
-    DLOG(INFO) << "HzMajiangRoom::OnMessage()->cmd:" << cmd << " roomid:=" << scene_id()
+    DLOG(INFO) << "ZhuanZhuanRoom::OnMessage()->cmd:" << cmd << " roomid:=" << scene_id()
         << " Scene Type:=" << scene_type() << " mid:=" << player->uid();
 
     switch (cmd)
@@ -168,7 +192,7 @@ std::int32_t HzMajiangRoom::OnMessage(std::shared_ptr<Agent > player, assistx2::
     return 0;
 }
 
-void HzMajiangRoom::OnTimer(boost::shared_ptr<assistx2::timer2::TimerContext > context)
+void ZhuanZhuanRoom::OnTimer(boost::shared_ptr<assistx2::timer2::TimerContext > context)
 {
     PrivateRoom::OnTimer(context);
 
@@ -191,12 +215,23 @@ void HzMajiangRoom::OnTimer(boost::shared_ptr<assistx2::timer2::TimerContext > c
     }
 }
 
-void HzMajiangRoom::OnGameStart()
+void ZhuanZhuanRoom::OnGameStart()
 {
     PrivateRoom::OnGameStart();
 
-    card_generator()->Reset(CardGenerator::Type::HZ_MAJIANG);
-
+    if (table_obj()->GetSeats().size() == 2u)
+    {
+        card_generator()->Reset(CardGenerator::Type::ZZ_TWO_PLAYER);
+    }
+    else if ((pImpl_->room_operation_ & 0x04) == 0x04)
+    {
+        card_generator()->Reset(CardGenerator::Type::HZ_MAJIANG);
+    }
+    else
+    {
+        card_generator()->Reset(CardGenerator::Type::GENERAL_MAJIANG);
+    }
+    
     auto& seats = table_obj()->GetSeats();
     for (auto iter : seats)
     {
@@ -243,89 +278,86 @@ void HzMajiangRoom::OnGameStart()
     pImpl_->BroadCastNextPlayer(banker_seatno());
 
     auto operations = pImpl_->GetOperations(banker_seatno());
-    //是否起手胡
+
     pImpl_->CheckQSHu(banker_seatno(), operations);
 
     if (operations.size() == 0)
     {
         operations.push_back(CardLogic::PLAY_OPERA);
     }
- 
+
     pImpl_->NotifyOperation(banker_seatno(), operations);
 }
 
-void HzMajiangRoom::OnGameOver()
+void ZhuanZhuanRoom::OnGameOver()
 {
     DLOG(INFO) << "OnGameOver: roomid:=" << scene_id()
         << ",type:=" << static_cast<std::int32_t>(pImpl_->hu_type_);
 
     auto now_banker_seatno = banker_seatno();
+    DCHECK(now_banker_seatno != Table::INVALID_SEAT);
 
     if (pImpl_->hu_type_ == PrivateRoom::HuType::ZIMOHU)
     {
+        pImpl_->ZhaNiao();
         DCHECK(pImpl_->hu_players_.size() > 0u);
         auto hu_seatno = pImpl_->hu_players_[0];
         DCHECK(hu_seatno != Table::INVALID_SEAT);
-        auto sum_score = 0;
-        if (pImpl_->is_yi_ma_quan_zhong_ == false)
-        {
-            pImpl_->ZhaNiao();
-            auto num = pImpl_->GetZhongNiaoNum(hu_seatno);
-            sum_score = 2 + num * 2;
-        }
-        else
-        {
-            pImpl_->ZhaNiao_YiMaQuanZhong();
-            auto num = pImpl_->GetZhongNiaoScore(hu_seatno);
-            sum_score = 2 + num;
-        }
-        
+        auto num = pImpl_->GetZhongNiaoNum(hu_seatno);
+        auto sum_score = 2 + num;
         pImpl_->CalculateScore(hu_seatno, sum_score);
+        if (pImpl_->IsZhuangXianCalculateScore())
+        {
+            if (hu_seatno == now_banker_seatno)
+            {
+                pImpl_->CalculateScore(hu_seatno, 1);
+            }
+            else
+            {
+                auto now_banker_seat = table_obj()->GetBySeatNo(now_banker_seatno);
+                auto hu_seat = table_obj()->GetBySeatNo(hu_seatno);
+                now_banker_seat->data()->game_score_ -= 1;
+                hu_seat->data()->game_score_ += 1;
+            }
+        }
         set_banker_seatno( hu_seatno );
     }
-    else if (pImpl_->hu_type_ == PrivateRoom::HuType::QINAGGANGHU)
+    else if (pImpl_->hu_type_ == PrivateRoom::HuType::QINAGGANGHU ||
+        pImpl_->hu_type_ == PrivateRoom::HuType::DIANPAOHU)
     {
-        if (pImpl_->is_yi_ma_quan_zhong_ == false)
-        {
-            pImpl_->ZhaNiao();
-        }
-        else
-        {
-            pImpl_->ZhaNiao_YiMaQuanZhong();
-        }
-
         DCHECK(pImpl_->beiqiang_seat_ != Table::INVALID_SEAT);
         auto beiqiang_seat = table_obj()->GetBySeatNo(pImpl_->beiqiang_seat_);
         DCHECK(beiqiang_seat != nullptr);
-
-        auto players = table_obj()->player_count();
-        auto score = players - 1;
         DCHECK(pImpl_->hu_players_.size() > 0u);
+        if (pImpl_->hu_players_.size() > 1)
+        {
+            pImpl_->zhama_start_seatno_ = pImpl_->beiqiang_seat_;
+        }
+        else
+        {
+            pImpl_->zhama_start_seatno_ = pImpl_->hu_players_[0];
+        }
+        pImpl_->ZhaNiao();
+
         for (auto iter : pImpl_->hu_players_)
         {
             DCHECK(iter != Table::INVALID_SEAT);
             auto seat = table_obj()->GetBySeatNo(iter);
             DCHECK(seat != nullptr);
-            auto sum_score = 0;
-            if (pImpl_->is_yi_ma_quan_zhong_ == false)
-            {
-                auto num = pImpl_->GetZhongNiaoNum(iter);
-                sum_score = 2 * score + 2 * num * score;
-            }
-            else
-            {
-                auto num = pImpl_->GetZhongNiaoScore(iter);
-                sum_score = 2 * score + num * score;
-            }
+            auto num = pImpl_->GetZhongNiaoNum(iter);
+            auto sum_score = 1 + num;
 
-            DCHECK(pImpl_->hu_card_ != nullptr);
-            if (pImpl_->NotHaveHongZhong(seat) == true &&
-                 pImpl_->hu_card_->getName() != "HZ")
-            {
-                sum_score += 2 * score;
-            }
             seat->data()->game_score_ += sum_score;
             beiqiang_seat->data()->game_score_ -= sum_score;
+            if (pImpl_->IsZhuangXianCalculateScore())
+            {
+                if (iter == now_banker_seatno || 
+                    pImpl_->beiqiang_seat_ == now_banker_seatno)
+                {
+                    seat->data()->game_score_ += 1;
+                    beiqiang_seat->data()->game_score_ -= 1;
+                }
+            }
         } 
         if (pImpl_->hu_players_.size() >= 2u)
         {
@@ -336,7 +368,7 @@ void HzMajiangRoom::OnGameOver()
             set_banker_seatno( pImpl_->hu_players_[0] );
         }
     }
-    else 
+    else
     {
         set_banker_seatno( pImpl_->last_mo_seat_ );
     }
@@ -430,14 +462,14 @@ void HzMajiangRoom::OnGameOver()
     PrivateRoom::OnGameOver();
 }
 
-std::int32_t HzMajiangRoom::Disband()
+std::int32_t ZhuanZhuanRoom::Disband()
 {
     pImpl_->ClearRoomData();
 
     return PrivateRoom::Disband();
 }
 
-void HzMajiangRoom::OnDisbandRoom(DisbandType type)
+void ZhuanZhuanRoom::OnDisbandRoom(DisbandType type)
 {
     auto played_num_tmp = played_num();
     if (room_state() == RoomBase::RoomState::PLAYING)
@@ -455,7 +487,7 @@ void HzMajiangRoom::OnDisbandRoom(DisbandType type)
     PrivateRoom::OnDisbandRoom(type);
 }
 
-void HzMajiangRoom::OnReConect(std::shared_ptr<Agent > player)
+void ZhuanZhuanRoom::OnReConect(std::shared_ptr<Agent > player)
 {
     //顺序固定,不能改变
     auto state = room_state();
@@ -468,11 +500,16 @@ void HzMajiangRoom::OnReConect(std::shared_ptr<Agent > player)
     }
 
     pImpl_->NotifyTableData(player);
+
+    for (auto iter : pImpl_->hu_message_)
+    {
+        player->SendTo(iter);
+    }
 }
 
-std::string HzMajiangRoom::RoomDataToString(bool isContainTableData)
+std::string ZhuanZhuanRoom::RoomDataToString(bool isContainTableData)
 {
-    json_spirit::Object root;
+    json_spirit::Object root; 
     root.push_back(json_spirit::Pair("room", static_cast<std::int32_t>(scene_id())));
     root.push_back(json_spirit::Pair("roomowner", static_cast<std::int32_t>(room_owner())));
     root.push_back(json_spirit::Pair("banker", banker_seatno()));
@@ -481,7 +518,7 @@ std::string HzMajiangRoom::RoomDataToString(bool isContainTableData)
     root.push_back(json_spirit::Pair("type", room_conifg_data()->type));
     root.push_back(json_spirit::Pair("ju", room_conifg_data()->ju));
     root.push_back(json_spirit::Pair("players", static_cast<std::int32_t>(table_obj()->GetSeats().size())));
-    root.push_back(json_spirit::Pair("playtype", 0));
+    root.push_back(json_spirit::Pair("playtype", pImpl_->play_type_));
     root.push_back(json_spirit::Pair("operation", pImpl_->room_operation_));
     root.push_back(json_spirit::Pair("zhama", pImpl_->zhama_num_));
     root.push_back(json_spirit::Pair("proxyuid", static_cast<std::int32_t>(proxy_uid())));
@@ -515,7 +552,7 @@ std::string HzMajiangRoom::RoomDataToString(bool isContainTableData)
     return json_spirit::write_string(json_spirit::Value(root));
 }
 
-void HzMajiangRoom::StringToRoomData(const std::string& str)
+void ZhuanZhuanRoom::StringToRoomData(const std::string& str)
 {
     auto value = Common::StringToJson(str);
     auto & obj = value.get_obj();
@@ -531,22 +568,28 @@ void HzMajiangRoom::StringToRoomData(const std::string& str)
             pImpl_->zhama_num_ = assistx2::ToInt32(iter.value_);
             continue;
         }
+        if (iter.name_ == "playtype")
+        {
+            pImpl_->play_type_ = assistx2::ToInt32(iter.value_);
+        }
     }
 
     PrivateRoom::StringToRoomData(str);
+
+    set_playlogic(table_obj()->GetSeats().size());
 }
 
-HzMajiangRoomImpl::HzMajiangRoomImpl(HzMajiangRoom* owner) :
+ZhuanZhuanRoomImpl::ZhuanZhuanRoomImpl(ZhuanZhuanRoom* owner) :
     owner_(owner)
 {
 
 }
 
-HzMajiangRoomImpl::~HzMajiangRoomImpl()
+ZhuanZhuanRoomImpl::~ZhuanZhuanRoomImpl()
 {
 }
 
-void HzMajiangRoomImpl::BroadCastNextPlayer(std::int32_t seatno)
+void ZhuanZhuanRoomImpl::BroadCastNextPlayer(std::int32_t seatno)
 {
     DLOG(INFO) << "BroadCastNextPlayer: roomid:=" << owner_->scene_id()
         << ",seatno:=" << seatno;
@@ -561,7 +604,7 @@ void HzMajiangRoomImpl::BroadCastNextPlayer(std::int32_t seatno)
     owner_->BroadCast(package);
 }
 
-void HzMajiangRoomImpl::NotifyOperation(std::int32_t seatno,
+void ZhuanZhuanRoomImpl::NotifyOperation(std::int32_t seatno,
     std::vector<CardLogic::OperationType> operate)
 {
     now_operator_ = seatno;
@@ -588,7 +631,7 @@ void HzMajiangRoomImpl::NotifyOperation(std::int32_t seatno,
     seat->player()->SendTo(package);   
 }
 
-void HzMajiangRoomImpl::OnPlay(std::shared_ptr<Agent > player, assistx2::Stream * packet)
+void ZhuanZhuanRoomImpl::OnPlay(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
     if (active_player_ != now_operator_)
     {
@@ -629,7 +672,7 @@ void HzMajiangRoomImpl::OnPlay(std::shared_ptr<Agent > player, assistx2::Stream 
     if (res == false)
     {
         LOG(ERROR) << "OnPlay:PlayCard Failed roomid:=" << owner_->scene_id() 
-            << ",mid:=" << player->uid()<< ",card_name:=" << card_name << "not in hand_cards";
+            << ",mid:=" << player->uid()<< ",card_name:=" << card->getName() << ",not in hand_cards";
         SendErrorCode(player, CLIENT_REQUEST_ONPLAY, -1);
         return;
     }
@@ -646,7 +689,7 @@ void HzMajiangRoomImpl::OnPlay(std::shared_ptr<Agent > player, assistx2::Stream 
     FindOperatorPlayer(now_played_seatno_, card);
 }
 
-void HzMajiangRoomImpl::OnPeng(std::shared_ptr<Agent > player, assistx2::Stream * packet)
+void ZhuanZhuanRoomImpl::OnPeng(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
     if (active_player_ == now_operator_)
     {
@@ -670,38 +713,23 @@ void HzMajiangRoomImpl::OnPeng(std::shared_ptr<Agent > player, assistx2::Stream 
         return;
     }
 
-    DCHECK(now_played_seatno_ != Table::INVALID_SEAT);
-    auto played_seat = owner_->table_obj()->GetBySeatNo(now_played_seatno_);
-    DCHECK(played_seat != nullptr);
-
-    auto card = played_seat->data()->played_cards_.top();
-    played_seat->data()->played_cards_.pop();
-
-    now_played_seatno_ = Table::INVALID_SEAT;
-
-    DCHECK(card_logic_->CheckPeng(card, seat->data()->hand_cards_) == true);
-    CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
-    CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
-
-    seat->data()->operated_cards_.insert(std::make_pair(card, PENG));
     seat->data()->now_operate_.clear();
+    seat->data()->is_qianggang_hu_ = false;
+    RemoveHuPlayerOperation(seatno);
 
-    assistx2::Stream stream(SERVER_BROADCAST_PENG_CARD);
-    stream.Write(seatno);
-    stream.Write(played_seat->seat_no());
-    stream.Write(card->getName());
-    stream.End();
-
-    owner_->BroadCast(stream);
-
-    GameDataManager::getInstance()->OnOperation(owner_, seatno, CardLogic::PENG_OPERA, card);
-
-    BroadCastNextPlayer(seatno);
+    if (hu_player_operation_.size() == 0)
+    {
+        DoPeng(seat,std::string(""));
+    }
+    else
+    {
+        next_func_ = std::bind(&ZhuanZhuanRoomImpl::DoPeng, this, seat, std::string(""));
+        SendErrorCode(player, CLIENT_REQUEST_ONPENG, -2);
+    }
     
-    NotifyOperation(seatno, std::vector<CardLogic::OperationType>(1,CardLogic::PLAY_OPERA));
 }
 
-void HzMajiangRoomImpl::OnGang(std::shared_ptr<Agent > player, assistx2::Stream * packet)
+void ZhuanZhuanRoomImpl::OnGang(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
@@ -717,152 +745,24 @@ void HzMajiangRoomImpl::OnGang(std::shared_ptr<Agent > player, assistx2::Stream 
         return;
     }
 
-    OperCardsType type = NULL_TYPE;
-    std::shared_ptr<Card> card = nullptr;
-    Seat* operaseat = nullptr;
-    if (active_player_ == now_operator_)
+    auto card_name = packet->Read<std::string>();
+    seat->data()->is_qianggang_hu_ = false;
+    seat->data()->now_operate_.clear();
+    RemoveHuPlayerOperation(seatno);
+
+    if (hu_player_operation_.size() == 0)
     {
-        operaseat = seat;
-        auto card_name = packet->Read<std::string>();
-        auto card_recv = CardFactory::MakeMajiangCard(card_name);
-        if (card_recv != nullptr && 
-            seat->data()->hand_cards_->card_count(card_recv) == 4)
-        {
-            type = AGANG;
-            card = card_recv;
-            IncrMingtang(seat, MINGTANG_ANGANG);
-        }
-        else
-        {
-            auto cards_info = seat->data()->hand_cards_->hand_cards_info();
-            for (auto iter : cards_info)
-            {
-                if (iter.num == 4)
-                {
-                    type = AGANG;
-                    card = iter.card;
-                    IncrMingtang(seat, MINGTANG_ANGANG);
-                    break;
-                }
-            }
-        }
-        if (type == NULL_TYPE)
-        {
-            for (auto iter : seat->data()->operated_cards_)
-            {
-                if (iter.second != PENG)
-                {
-                    continue;
-                }
-                DCHECK(seat->data()->mo_card_ != nullptr);
-                if (iter.first->getFace() == seat->data()->mo_card_->getFace())
-                {
-                    type = GGANG;
-                    card = seat->data()->mo_card_;
-                    CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
-                    break;
-                }
-            }
-        }
-        else
-        {
-            CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
-            CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
-            CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
-            CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
-        }
+        DoGang(seat, card_name);
     }
     else
     {
-        DCHECK(now_played_seatno_ != Table::INVALID_SEAT);
-        auto played_seat = owner_->table_obj()->GetBySeatNo(now_played_seatno_);
-        DCHECK(played_seat != nullptr);
-
-        operaseat = played_seat;
-
-        card = played_seat->data()->played_cards_.top();
-        played_seat->data()->played_cards_.pop();
-
-        DCHECK(card_logic_->CheckGang(card, seat->data()->hand_cards_) == true);
-
-        now_played_seatno_ = Table::INVALID_SEAT;
-       
-        played_seat->data()->game_score_ -= 3;
-        seat->data()->game_score_ += 3;
-
-        seat->data()->gang_ming_num_ += 1;
-        played_seat->data()->gang_fang_num_ += 1;
-
-        type = MGANG;
-
-        IncrMingtang(played_seat,MINGTANG_DIANGANG);
-        IncrMingtang(seat, MINGTANG_JIEGANG);
-        
-        CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
-        CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
-        CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
+        next_func_ = std::bind(&ZhuanZhuanRoomImpl::DoGang, this, seat, card_name);
+        SendErrorCode(player, CLIENT_REQUEST_ONGANG, -2);
     }
-
-    CHECK(card != nullptr);
-
-    seat->data()->now_operate_.clear();
-
-    assistx2::Stream stream(SERVER_BROADCAST_GANG_CARD);
-    stream.Write(seatno);
-    stream.Write(static_cast<std::int32_t>(type));
-    stream.Write(operaseat->seat_no());
-    stream.Write(card->getName());
-    stream.End();
-
-    owner_->BroadCast(stream);
-
-    GameDataManager::getInstance()->OnOperation(owner_, seatno, CardLogic::GANG_OPERA, card);
-
-    if (type == GGANG)
-    {
-        auto res = FindQiangGangHu(seatno,card);
-        if (res == true)
-        {
-            IncrMingtang(seat, MINGTANG_DIANPAO);
-            seat->data()->beiqiang_hu_num_ += 1;
-            return;
-        }
-        auto iter = std::find_if(seat->data()->operated_cards_.begin(), seat->data()->operated_cards_.end(), 
-            [card](const std::pair<std::shared_ptr<Card>,OperCardsType> value) {
-            return card->getName() == value.first->getName();
-        });
-        if (iter != seat->data()->operated_cards_.end())
-        {
-            seat->data()->operated_cards_.erase(iter);
-        }
-        seat->data()->gang_gong_num_ += 1;
-        IncrMingtang(seat, MINGTANG_GONGGANG);
-        CalculateScore(seatno,1);
-    }
-    else if (type == AGANG)
-    {
-        seat->data()->gang_an_num_ += 1;
-        CalculateScore(seatno, 2);
-    }
-
-    seat->data()->operated_cards_.insert(std::make_pair(card, type));
- 
-    BroadCastNextPlayer(seatno);
-
-    owner_->NewTimer(1, SceneTimerContext::MAJIANG_MOPAI, seat);
-    //MoCard(player);
 }
 
-void HzMajiangRoomImpl::OnHu(std::shared_ptr<Agent > player, assistx2::Stream * packet)
+void ZhuanZhuanRoomImpl::OnHu(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
-    if (active_player_ != now_operator_)
-    {
-        LOG(ERROR) << "OnHu:active_player_ != now_operator_ Failed roomid:=" 
-            << owner_->scene_id() << ",mid:=" << player->uid() ;
-        SendErrorCode(player, CLIENT_REQUEST_ONHU, -1);
-        return;
-    }
-
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
 
@@ -877,63 +777,55 @@ void HzMajiangRoomImpl::OnHu(std::shared_ptr<Agent > player, assistx2::Stream * 
         return;
     }
 
+    next_func_ = nullptr;
     seat->data()->now_operate_.clear();
-    
-    seat->data()->zimo_num_ += 1;
-    IncrMingtang(seat, MINGTANG_ZIMOHU);
 
-    if (NotHaveHongZhong(seat) == true)
+    if (now_played_seatno_ != Table::INVALID_SEAT &&
+        seat->data()->mo_card_ == nullptr)
     {
-        CalculateScore(seat->seat_no(), 2);
-        IncrMingtang(seat, MINGTANG_WUHONGZHONG);
-    }
-
-    hu_card_ = seat->data()->mo_card_;
-    if (hu_card_ != nullptr)
-    {
-        CHECK(seat->data()->hand_cards_->RemoveCard(hu_card_) == true);
-    }
-
-    assistx2::Stream stream(SERVER_BROADCAST_HU_CARD);
-    stream.Write(seatno);
-    auto& hand_cards = seat->data()->hand_cards_->hand_cards();
-    stream.Write(static_cast<std::int32_t>(hand_cards.size()));
-    for (auto it : hand_cards)
-    {
-        stream.Write(it->getName());
-    }
-    if (hu_card_ == nullptr)
-    {
-        stream.Write(std::string(""));
+        DoDianPaoHu(seat, std::string(""));
     }
     else
     {
-        stream.Write(hu_card_->getName());
+        DoZiMoHu(seat, std::string(""));
     }
     
-    stream.End();
-
-    owner_->BroadCast(stream);
-
     GameDataManager::getInstance()->OnOperation(owner_, seatno, CardLogic::HUPAI_OPERA, hu_card_);
 
     hu_players_.push_back(seatno);
 
-    hu_type_ = PrivateRoom::HuType::ZIMOHU;
-    owner_->NewTimer(1, SceneTimerContext::MAJIANG_GAMEOVER, nullptr);
+    RemoveHuPlayerOperation(seatno);
+
+    auto &seats = owner_->table_obj()->GetSeats();
+    for (auto iter : seats)
+    {
+        iter->data()->now_operate_.clear();
+    }
+
+    if (hu_player_operation_.size() == 0u)
+    {
+        owner_->NewTimer(1, SceneTimerContext::MAJIANG_GAMEOVER, nullptr);
+    }
+    else
+    {
+        for (auto iter : hu_player_operation_)
+        {
+            NotifyOperation(iter, std::vector<CardLogic::OperationType>(1, CardLogic::HUPAI_OPERA));
+        }
+    }
 }
-void HzMajiangRoomImpl::OnCancle(std::shared_ptr<Agent > player, assistx2::Stream * packet)
+void ZhuanZhuanRoomImpl::OnCancle(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
 
-    if (now_operator_ != seatno)
-    {
-        LOG(ERROR) << "OnCancle: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
-            << ",now_operator_:=" << now_operator_ << " != seatno:=" << seatno;
-        SendErrorCode(player, CLIENT_REQUEST_ONCANCLE, -1);
-        return;
-    }
+//     if (now_operator_ != seatno)
+//     {
+//         DLOG(ERROR) << "OnCancle: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
+//             << ",now_operator_:=" << now_operator_ << " != seatno:=" << seatno;
+//         SendErrorCode(player, CLIENT_REQUEST_ONCANCLE, -1);
+//         return;
+//     }
 
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
     DCHECK(seat != nullptr);
@@ -957,25 +849,47 @@ void HzMajiangRoomImpl::OnCancle(std::shared_ptr<Agent > player, assistx2::Strea
         return;
     }
 
-    if (active_player_ == now_operator_)
+    seat->data()->is_qianggang_hu_ = false;
+
+    RemoveHuPlayerOperation(seatno);
+
+    if (hu_player_operation_.size() == 0 && hu_players_.size() != 0)
     {
-        NotifyOperation(seatno, std::vector<CardLogic::OperationType>(1, CardLogic::PLAY_OPERA));
+        owner_->NewTimer(1, SceneTimerContext::MAJIANG_GAMEOVER, nullptr);
+        return;
+    }
+
+    if (IsNoOperator() != true) return;
+
+    if (hu_player_operation_.size() == 0 && next_func_ == nullptr )
+    {
+        if (active_player_ == now_operator_)
+        {
+            NotifyOperation(seatno, std::vector<CardLogic::OperationType>(1, CardLogic::PLAY_OPERA));
+        }
+        else
+        {
+            DCHECK(active_player_ != Table::INVALID_SEAT);
+            auto nextseat = owner_->table_obj()->next_seat(active_player_);
+            DCHECK(nextseat != nullptr);
+
+            BroadCastNextPlayer(nextseat->seat_no());
+
+            owner_->NewTimer(1, SceneTimerContext::MAJIANG_MOPAI, nextseat);
+            //MoCard(nextseat->player());
+        }
+    }
+    else if (hu_player_operation_.size() != 0)
+    {
+        //do nothing
     }
     else
     {
-        DCHECK(active_player_ != Table::INVALID_SEAT);
-        auto nextseat = owner_->table_obj()->next_seat(active_player_);
-        DCHECK(nextseat != nullptr);
-
-        BroadCastNextPlayer(nextseat->seat_no());
-
-        owner_->NewTimer(1, SceneTimerContext::MAJIANG_MOPAI, nextseat);
-        //MoCard(nextseat->player());
+        next_func_(seat,std::string("test"));
     }
-    
 }
 
-bool HzMajiangRoomImpl::CheckOperation(Seat* seat, CardLogic::OperationType operate)
+bool ZhuanZhuanRoomImpl::CheckOperation(Seat* seat, CardLogic::OperationType operate)
 {
     for (auto iter : seat->data()->now_operate_)
     {
@@ -1003,7 +917,7 @@ bool HzMajiangRoomImpl::CheckOperation(Seat* seat, CardLogic::OperationType oper
     return res;
 }
 
-std::vector<CardLogic::OperationType> HzMajiangRoomImpl::GetOperations(std::int32_t seatno)
+std::vector<CardLogic::OperationType> ZhuanZhuanRoomImpl::GetOperations(std::int32_t seatno)
 {
     DCHECK(seatno != Table::INVALID_SEAT);
 
@@ -1026,7 +940,7 @@ std::vector<CardLogic::OperationType> HzMajiangRoomImpl::GetOperations(std::int3
     return operatios;
 }
 
-void HzMajiangRoomImpl::BroadCastPlayedCard(std::int32_t seatno, std::shared_ptr<Card> card)
+void ZhuanZhuanRoomImpl::BroadCastPlayedCard(std::int32_t seatno, std::shared_ptr<Card> card)
 {
     assistx2::Stream stream(SERVER_BROADCAST_PLAYED_CARD);
     stream.Write(seatno);
@@ -1036,7 +950,7 @@ void HzMajiangRoomImpl::BroadCastPlayedCard(std::int32_t seatno, std::shared_ptr
     owner_->BroadCast(stream);
 }
 
-void HzMajiangRoomImpl::FindOperatorPlayer(std::int32_t seatno, std::shared_ptr<Card> card)
+void ZhuanZhuanRoomImpl::FindOperatorPlayer(std::int32_t seatno, std::shared_ptr<Card> card)
 {
     DLOG(INFO) << "FindOperatorPlayer: roomid:=" << owner_->scene_id()
         << ",seatno:=" << seatno << ",card_name:=" << card->getName();
@@ -1061,11 +975,28 @@ void HzMajiangRoomImpl::FindOperatorPlayer(std::int32_t seatno, std::shared_ptr<
         {
             operatios.push_back(CardLogic::GANG_OPERA);
         }
-        if (operatios.size() != 0u)
+        if (play_type_ == TYPE_DIANPAO_HU)
         {
-            has_operator = true;
-            NotifyOperation(iter->seat_no(),operatios);
-            break;
+            if (CanGang(card) == true &&
+                CheckHu(card, iter) == true)
+            {
+                AddHuPlayerOperation(iter->seat_no());
+                operatios.push_back(CardLogic::HUPAI_OPERA);
+            }
+            if (operatios.size() != 0u)
+            {
+                has_operator = true;
+                NotifyOperation(iter->seat_no(), operatios);
+            }
+        }
+        else
+        {
+            if (operatios.size() != 0u)
+            {
+                has_operator = true;
+                NotifyOperation(iter->seat_no(), operatios);
+                break;
+            }
         }
     }
 
@@ -1079,7 +1010,7 @@ void HzMajiangRoomImpl::FindOperatorPlayer(std::int32_t seatno, std::shared_ptr<
     }
 }
 
-bool HzMajiangRoomImpl::FindGongGang(Seat* seat, std::shared_ptr<Card> card)
+bool ZhuanZhuanRoomImpl::FindGongGang(Seat* seat, std::shared_ptr<Card> card)
 {
     for (auto iter : seat->data()->operated_cards_)
     {
@@ -1096,8 +1027,9 @@ bool HzMajiangRoomImpl::FindGongGang(Seat* seat, std::shared_ptr<Card> card)
     return false;
 }
 
-bool HzMajiangRoomImpl::FindQiangGangHu(std::int32_t seatno, std::shared_ptr<Card> card)
+bool ZhuanZhuanRoomImpl::FindQiangGangHu(std::int32_t seatno, std::shared_ptr<Card> card)
 {
+    auto hu_count = 0;
     auto& seats = owner_->table_obj()->GetSeats();
     for (auto iter : seats)
     {
@@ -1108,40 +1040,22 @@ bool HzMajiangRoomImpl::FindQiangGangHu(std::int32_t seatno, std::shared_ptr<Car
         auto res = CheckHu(card, iter);
         if (res == true)
         {
-            hu_card_ = card;
-            hu_players_.push_back(iter->seat_no());
-            assistx2::Stream stream(SERVER_BROADCAST_QIANGGANG_HU);
-            stream.Write(iter->seat_no());
-            stream.Write(seatno);
-            stream.Write(card->getName());
-            auto& hand_cards = iter->data()->hand_cards_->hand_cards();
-            stream.Write(static_cast<std::int32_t>(hand_cards.size()));
-            for (auto it : hand_cards)
-            {
-                stream.Write(it->getName());
-            }
-            stream.End();
-
-            owner_->BroadCast(stream);
-
-            GameDataManager::getInstance()->OnOperation(owner_, iter->seat_no(), CardLogic::HUPAI_OPERA, hu_card_);
-            iter->data()->gang_hu_num_ += 1;
-            IncrMingtang(iter, MINGTANG_JIEPAO);
+            hu_count += 1;
+            iter->data()->is_qianggang_hu_ = true;
+            AddHuPlayerOperation(iter->seat_no());
+            NotifyOperation(iter->seat_no(), std::vector<CardLogic::OperationType>(1, CardLogic::HUPAI_OPERA));
         }
     }
 
-    if (hu_players_.size() > 0u)
+    if (hu_count > 0)
     {
-        beiqiang_seat_ = seatno;
-        hu_type_ = PrivateRoom::HuType::QINAGGANGHU;
-        owner_->NewTimer(1, SceneTimerContext::MAJIANG_GAMEOVER, nullptr);
         return true;
     }
 
     return false;
 }
 
-void HzMajiangRoomImpl::MoCard(std::shared_ptr<Agent > player)
+void ZhuanZhuanRoomImpl::MoCard(std::shared_ptr<Agent > player)
 {
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
@@ -1151,7 +1065,7 @@ void HzMajiangRoomImpl::MoCard(std::shared_ptr<Agent > player)
 
     auto cardcount = static_cast<std::int32_t>(
         owner_->card_generator()->count());
-    if (cardcount == zhama_num_)
+    if (cardcount == 0)
     {
         hu_type_ = PrivateRoom::HuType::CHOUZHUANG;
         owner_->NewTimer(1, SceneTimerContext::MAJIANG_GAMEOVER, nullptr);
@@ -1197,7 +1111,7 @@ void HzMajiangRoomImpl::MoCard(std::shared_ptr<Agent > player)
     NotifyOperation(seatno, operations);
 }
 
-void HzMajiangRoomImpl::SendErrorCode(std::shared_ptr<Agent > player,
+void ZhuanZhuanRoomImpl::SendErrorCode(std::shared_ptr<Agent > player,
     const std::int16_t cmd, const std::int32_t err)
 {
     assistx2::Stream stream(cmd);
@@ -1207,7 +1121,7 @@ void HzMajiangRoomImpl::SendErrorCode(std::shared_ptr<Agent > player,
     player->SendTo(stream);
 }
 
-void HzMajiangRoomImpl::CalculateScore(std::int32_t seatno, std::int32_t score)
+void ZhuanZhuanRoomImpl::CalculateScore(std::int32_t seatno, std::int32_t score)
 {
     DLOG(INFO) << "CalculateScore: roomid:=" << owner_->scene_id() 
         << ",seatno:=" << seatno <<",score:=" << score;
@@ -1226,37 +1140,35 @@ void HzMajiangRoomImpl::CalculateScore(std::int32_t seatno, std::int32_t score)
     }
 }
 
-void HzMajiangRoomImpl::ZhaNiao()
+void ZhuanZhuanRoomImpl::ZhaNiao()
 {
-    std::string niao_str;
-    for (std::int32_t i = 0; i < zhama_num_; ++i)
+    auto zhama_num_tmp = zhama_num_;
+    auto card_count = owner_->card_generator()->count();
+    if (static_cast<std::int32_t>(card_count)
+        < zhama_num_)
+    {
+        zhama_num_tmp = card_count;
+    }
+
+    for (std::int32_t i = 0; i < zhama_num_tmp; ++i)
     {
         auto card = owner_->card_generator()->Pop();
         vec_niao_.push_back(card);
-        niao_str += card->getName() + ",";
     }
 
-    DLOG(INFO) << "ZhaNiao: roomid:=" << owner_->scene_id() << ",niao:" << niao_str;
-    
+    DLOG(INFO) << "ZhaNiao: roomid:=" << owner_->scene_id() << ",niao:" << vec_niao_;
+    Cards temp_niao = vec_niao_;
     for (auto iter_card : vec_niao_)
     {
         auto& seats = owner_->table_obj()->GetSeats();
         for (auto iter : seats)
         {
-            auto num = iter->seat_no() - owner_->banker_seatno();//玩家和庄家的距离
+            auto num = iter->seat_no() - zhama_start_seatno_;//玩家和胡家的距离
             if (iter_card->getFace() == Card::Face::HongZ &&
-                iter->seat_no() == owner_->banker_seatno())
+                iter->seat_no() == zhama_start_seatno_)
             {
-                auto it = zhong_ma_seats_.find(iter->seat_no());
-                if (it != zhong_ma_seats_.end())
-                {
-                    it->second.push_back(iter_card);
-                }
-                else
-                {
-                    zhong_ma_seats_.insert(std::make_pair(iter->seat_no(), 
-                        std::vector<std::shared_ptr<Card>>(1, iter_card)));
-                }
+                AddZhongMaSeats(iter->seat_no(), iter_card);
+                Common::RemoveCard(iter_card, temp_niao);
             }
             else if (iter_card->getFace() == Card::Face::HongZ)
             {
@@ -1266,16 +1178,8 @@ void HzMajiangRoomImpl::ZhaNiao()
                 iter_card->getFace() == (Card::Face::Five + num) ||
                 iter_card->getFace() == (Card::Face::Nine + num))
             {
-                auto it = zhong_ma_seats_.find(iter->seat_no());
-                if (it != zhong_ma_seats_.end())
-                {
-                    it->second.push_back(iter_card);
-                }
-                else
-                {
-                    zhong_ma_seats_.insert(std::make_pair(iter->seat_no(),
-                        std::vector<std::shared_ptr<Card>>(1, iter_card)));
-                }
+                AddZhongMaSeats(iter->seat_no(), iter_card);
+                Common::RemoveCard(iter_card, temp_niao);
             }
             else
             {
@@ -1283,6 +1187,12 @@ void HzMajiangRoomImpl::ZhaNiao()
             }
         }
     }
+
+    for (auto iter : temp_niao)
+    {
+        AddZhongMaSeats(0, iter);
+    }
+
     std::stringstream ss;
     assistx2::Stream stream(SERVER_BROADCAST_ZHA_NIAO);
     stream.Write(static_cast<std::int32_t>(zhong_ma_seats_.size()));
@@ -1303,49 +1213,7 @@ void HzMajiangRoomImpl::ZhaNiao()
     DLOG(INFO) << "ZhaNiao: roomid:=" << owner_->scene_id() << ss.str();
 }
 
-void HzMajiangRoomImpl::ZhaNiao_YiMaQuanZhong()
-{
-    auto card = owner_->card_generator()->Pop();
-    vec_niao_.push_back(card);
-
-    DLOG(INFO) << "ZhaNiao_YiMaQuanZhong: roomid:=" << owner_->scene_id() 
-        << ",niao:" << card->getName();
-
-    for (auto iter : hu_players_)
-    {
-        auto it = zhong_ma_seats_.find(iter);
-        if (it != zhong_ma_seats_.end())
-        {
-            it->second.push_back(card);
-        }
-        else
-        {
-            zhong_ma_seats_.insert(std::make_pair(iter,
-                std::vector<std::shared_ptr<Card>>(1, card)));
-        }
-    }
-
-    std::stringstream ss;
-    assistx2::Stream stream(SERVER_BROADCAST_ZHA_NIAO);
-    stream.Write(static_cast<std::int32_t>(zhong_ma_seats_.size()));
-    for (auto iter : zhong_ma_seats_)
-    {
-        ss << ",zhongniao seatno:=" << iter.first << ",card:=";
-        stream.Write(iter.first);
-        stream.Write(static_cast<std::int32_t>(iter.second.size()));
-        for (auto it : iter.second)
-        {
-            ss << it->getName() + ",";
-            stream.Write(it->getName());
-        }
-    }
-    stream.End();
-    owner_->BroadCast(stream);
-
-    DLOG(INFO) << "ZhaNiao_YiMaQuanZhong: roomid:=" << owner_->scene_id() << ss.str();
-}
-
-std::int32_t HzMajiangRoomImpl::GetZhongNiaoNum(std::int32_t seatno)
+std::int32_t ZhuanZhuanRoomImpl::GetZhongNiaoNum(std::int32_t seatno)
 {
     auto it = zhong_ma_seats_.find(seatno);
     if (it != zhong_ma_seats_.end())
@@ -1356,30 +1224,7 @@ std::int32_t HzMajiangRoomImpl::GetZhongNiaoNum(std::int32_t seatno)
     return 0;
 }
 
-std::int32_t HzMajiangRoomImpl::GetZhongNiaoScore(std::int32_t seatno)
-{
-    auto it = zhong_ma_seats_.find(seatno);
-    if (it != zhong_ma_seats_.end())
-    {
-        DCHECK(it->second.size() == 1);
-        auto card = it->second[0];
-        if (card->getFace() == Card::Face::One ||
-            card->getFace() == Card::Face::Five ||
-            card->getFace() == Card::Face::Nine ||
-            card->getFace() == Card::Face::HongZ)
-        {
-            return 10;
-        }
-        else
-        {
-            return static_cast<std::int32_t>(card->getFace());
-        }
-    }
-
-    return 0;
-}
-
-void HzMajiangRoomImpl::ClearGameData()
+void ZhuanZhuanRoomImpl::ClearGameData()
 {
     active_player_ = Table::INVALID_SEAT;
     now_operator_ = Table::INVALID_SEAT;
@@ -1390,8 +1235,11 @@ void HzMajiangRoomImpl::ClearGameData()
     zhong_ma_seats_.clear();
     hu_card_ = nullptr;
     vec_niao_.clear();
+    hu_player_operation_.clear();
+    next_func_ = nullptr;
+    hu_message_.clear();
+    zhama_start_seatno_ = Table::INVALID_SEAT;
     hu_type_ = PrivateRoom::HuType::CHOUZHUANG;
-    is_yi_ma_quan_zhong_ = false;
     auto& seats = owner_->table_obj()->GetSeats();
     for (auto iter : seats)
     {
@@ -1400,20 +1248,23 @@ void HzMajiangRoomImpl::ClearGameData()
     }
 }
 
-void HzMajiangRoomImpl::ClearRoomData()
+void ZhuanZhuanRoomImpl::ClearRoomData()
 {
     active_player_ = Table::INVALID_SEAT;
     now_operator_ = Table::INVALID_SEAT;
     now_played_seatno_ = Table::INVALID_SEAT;
     last_mo_seat_ = Table::INVALID_SEAT;
     beiqiang_seat_ = Table::INVALID_SEAT;
-    zhama_num_ = 2;
+    zhama_num_ = 0;
     room_operation_ = 0;
     hu_players_.clear();
     zhong_ma_seats_.clear();
     hu_card_ = nullptr;
     vec_niao_.clear();
-    is_yi_ma_quan_zhong_ = false;
+    hu_player_operation_.clear();
+    next_func_ = nullptr;
+    hu_message_.clear();
+    zhama_start_seatno_ = Table::INVALID_SEAT;
     hu_type_ = PrivateRoom::HuType::CHOUZHUANG;
     auto& seats = owner_->table_obj()->GetSeats();
     for (auto iter : seats)
@@ -1423,7 +1274,7 @@ void HzMajiangRoomImpl::ClearRoomData()
     }
 }
 
-void HzMajiangRoomImpl::NotifyTableData(std::shared_ptr<Agent > player)
+void ZhuanZhuanRoomImpl::NotifyTableData(std::shared_ptr<Agent > player)
 {
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
@@ -1491,10 +1342,10 @@ void HzMajiangRoomImpl::NotifyTableData(std::shared_ptr<Agent > player)
     }
 }
 
-bool HzMajiangRoomImpl::CheckHu(const std::shared_ptr<Card> card, Seat* seat)
+bool ZhuanZhuanRoomImpl::CheckHu(const std::shared_ptr<Card> card, Seat* seat)
 {
     auto res = card_logic_->CheckHu(card, seat->data()->hand_cards_);
-    if (((room_operation_ & 0x01) == 0x01) && res == false)
+    if (((room_operation_ & 0x02) == 0x02) && res == false)
     {
         if (seat->data()->operated_cards_.size() != 0u)
         {
@@ -1506,7 +1357,7 @@ bool HzMajiangRoomImpl::CheckHu(const std::shared_ptr<Card> card, Seat* seat)
     return res;
 }
 
-void HzMajiangRoomImpl::IncrMingtang(Seat* seat, MingTangType type)
+void ZhuanZhuanRoomImpl::IncrMingtang(Seat* seat, MingTangType type)
 {
     DCHECK(seat != nullptr);
 
@@ -1521,36 +1372,10 @@ void HzMajiangRoomImpl::IncrMingtang(Seat* seat, MingTangType type)
     }
 }
 
-bool HzMajiangRoomImpl::NotHaveHongZhong(Seat* seat)
-{
-    DCHECK(seat != nullptr);
-
-    auto hzcard = CardFactory::MakeMajiangCard("HZ");
-    DCHECK(hzcard != nullptr);
-
-    auto hz_count = seat->data()->hand_cards_->card_count(hzcard);
-    if (hz_count != 0)
-    {
-        return false;
-    }
-
-    auto  operated_cards = seat->data()->operated_cards_;
-    for (auto iter : operated_cards)
-    {
-        if (iter.first->getFace() == Card::Face::HongZ &&
-            iter.first->getType() == Card::Type::Zi)
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-void HzMajiangRoomImpl::RoomAccount()
+void ZhuanZhuanRoomImpl::RoomAccount()
 {
     auto& seats = owner_->table_obj()->GetSeats();
-    if (static_cast<std::int32_t>(seats.size()) != 
+    if (static_cast<std::int32_t>(seats.size()) !=
         owner_->table_obj()->player_count())
     {
         return;
@@ -1581,8 +1406,36 @@ void HzMajiangRoomImpl::RoomAccount()
     owner_->BroadCast(stream, nullptr, true);
 }
 
-void HzMajiangRoomImpl::CheckQSHu(std::int32_t seatno, std::vector<CardLogic::OperationType>& operation)
+bool ZhuanZhuanRoomImpl::IsZhuangXianCalculateScore()
 {
+    if ((room_operation_ & 0x01) == 0x01)
+    {
+        return true;
+    }
+    return false;
+}
+
+bool ZhuanZhuanRoomImpl::CanGang(const std::shared_ptr<Card> card)
+{
+    if ((room_operation_ & 0x04) != 0x04)
+    {
+        return true;
+    }
+
+    if (card->getName() != "HZ")
+    {
+        return true;
+    }
+
+    return false;
+}
+
+void ZhuanZhuanRoomImpl::CheckQSHu(std::int32_t seatno, std::vector<CardLogic::OperationType>& operation)
+{
+    if ((room_operation_ & 0x04) != 0x04)
+    {
+        return;
+    }
     auto iter = std::find_if(operation.begin(), operation.end(),
         [](const CardLogic::OperationType value) {
         return value == CardLogic::HUPAI_OPERA;
@@ -1604,4 +1457,354 @@ void HzMajiangRoomImpl::CheckQSHu(std::int32_t seatno, std::vector<CardLogic::Op
     {
         operation.push_back(CardLogic::HUPAI_OPERA);
     }
+}
+
+void ZhuanZhuanRoomImpl::AddHuPlayerOperation(const std::int32_t seatno)
+{
+    auto iter = std::find_if(hu_player_operation_.begin(), hu_player_operation_.end(), 
+        [seatno](const std::int32_t value)
+    {
+        return value == seatno;
+    });
+    if (iter == hu_player_operation_.end())
+    {
+        hu_player_operation_.push_back(seatno);
+    }
+}
+
+void ZhuanZhuanRoomImpl::RemoveHuPlayerOperation(const std::int32_t seatno)
+{
+    auto iter = std::find_if(hu_player_operation_.begin(), hu_player_operation_.end(),
+        [seatno](const std::int32_t value)
+    {
+        return value == seatno;
+    });
+    if (iter != hu_player_operation_.end())
+    {
+        hu_player_operation_.erase(iter);
+    }
+}
+
+void ZhuanZhuanRoomImpl::DoPeng(Seat* seat, std::string card_name)
+{
+    next_func_ = nullptr;
+
+    auto seatno = seat->seat_no();
+
+    DCHECK(now_played_seatno_ != Table::INVALID_SEAT);
+    auto played_seat = owner_->table_obj()->GetBySeatNo(now_played_seatno_);
+    DCHECK(played_seat != nullptr);
+
+    auto card = played_seat->data()->played_cards_.top();
+    played_seat->data()->played_cards_.pop();
+
+    now_played_seatno_ = Table::INVALID_SEAT;
+
+    DCHECK(card_logic_->CheckPeng(card, seat->data()->hand_cards_) == true);
+    CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
+    CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
+
+    seat->data()->operated_cards_.insert(std::make_pair(card, PENG));
+
+    assistx2::Stream stream(SERVER_BROADCAST_PENG_CARD);
+    stream.Write(seatno);
+    stream.Write(played_seat->seat_no());
+    stream.Write(card->getName());
+    stream.End();
+
+    owner_->BroadCast(stream);
+
+    GameDataManager::getInstance()->OnOperation(owner_, seatno, CardLogic::PENG_OPERA, card);
+
+    BroadCastNextPlayer(seatno);
+
+    NotifyOperation(seatno, std::vector<CardLogic::OperationType>(1, CardLogic::PLAY_OPERA));
+}
+
+void ZhuanZhuanRoomImpl::DoGang(Seat* seat, std::string card_name)
+{
+    next_func_ = nullptr;
+
+    auto seatno = seat->seat_no();
+    OperCardsType type = NULL_TYPE;
+    std::shared_ptr<Card> card = nullptr;
+    Seat* operaseat = nullptr;
+    if (active_player_ == now_operator_)
+    {
+        operaseat = seat;
+        auto card_recv = CardFactory::MakeMajiangCard(card_name);
+        if (card_recv != nullptr &&
+            seat->data()->hand_cards_->card_count(card_recv) == 4 &&
+            CanGang(card_recv) == true)
+        {
+            type = AGANG;
+            card = card_recv;
+            IncrMingtang(seat, MINGTANG_ANGANG);
+        }
+        else
+        {
+            auto cards_info = seat->data()->hand_cards_->hand_cards_info();
+            for (auto iter : cards_info)
+            {
+                if (iter.num == 4 && 
+                    CanGang(iter.card) == true)
+                {
+                    type = AGANG;
+                    card = iter.card;
+                    IncrMingtang(seat, MINGTANG_ANGANG);
+                    break;
+                }
+            }
+        }
+        if (type == NULL_TYPE)
+        {
+            for (auto iter : seat->data()->operated_cards_)
+            {
+                if (iter.second != PENG)
+                {
+                    continue;
+                }
+                DCHECK(seat->data()->mo_card_ != nullptr);
+                if (iter.first->getFace() == seat->data()->mo_card_->getFace())
+                {
+                    type = GGANG;
+                    card = seat->data()->mo_card_;
+                    CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
+                    break;
+                }
+            }
+        }
+        else
+        {
+            CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
+            CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
+            CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
+            CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
+        }
+    }
+    else
+    {
+        DCHECK(now_played_seatno_ != Table::INVALID_SEAT);
+        auto played_seat = owner_->table_obj()->GetBySeatNo(now_played_seatno_);
+        DCHECK(played_seat != nullptr);
+
+        operaseat = played_seat;
+
+        card = played_seat->data()->played_cards_.top();
+        played_seat->data()->played_cards_.pop();
+
+        DCHECK(card_logic_->CheckGang(card, seat->data()->hand_cards_) == true);
+
+        now_played_seatno_ = Table::INVALID_SEAT;
+
+        auto score = owner_->table_obj()->GetSeats().size() - 1;
+        played_seat->data()->game_score_ -= score;
+        seat->data()->game_score_ += score;
+
+        seat->data()->gang_ming_num_ += 1;
+        played_seat->data()->gang_fang_num_ += 1;
+
+        type = MGANG;
+
+        IncrMingtang(played_seat, MINGTANG_DIANGANG);
+        IncrMingtang(seat, MINGTANG_JIEGANG);
+
+        CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
+        CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
+        CHECK(seat->data()->hand_cards_->RemoveCard(card) == true);
+    }
+
+    CHECK(card != nullptr);
+
+    if (type == GGANG)
+    {
+        auto res = FindQiangGangHu(seatno, card);
+        if (res == true)
+        {
+            next_func_ = std::bind(&ZhuanZhuanRoomImpl::DoGongGang, this, seat, card->getName());
+            SendErrorCode(seat->player(), SERVER_BROADCAST_GANG_CARD, -2);
+            return;
+        }
+        auto iter = std::find_if(seat->data()->operated_cards_.begin(), seat->data()->operated_cards_.end(),
+            [card](const std::pair<std::shared_ptr<Card>, OperCardsType> value) {
+            return card->getName() == value.first->getName();
+        });
+        if (iter != seat->data()->operated_cards_.end())
+        {
+            seat->data()->operated_cards_.erase(iter);
+        }
+        seat->data()->gang_gong_num_ += 1;
+        IncrMingtang(seat, MINGTANG_GONGGANG);
+        CalculateScore(seatno, 1);
+    }
+    else if (type == AGANG)
+    {
+        seat->data()->gang_an_num_ += 1;
+        CalculateScore(seatno, 2);
+    }
+
+    seat->data()->operated_cards_.insert(std::make_pair(card, type));
+
+    assistx2::Stream stream(SERVER_BROADCAST_GANG_CARD);
+    stream.Write(seatno);
+    stream.Write(static_cast<std::int32_t>(type));
+    stream.Write(operaseat->seat_no());
+    stream.Write(card->getName());
+    stream.End();
+
+    owner_->BroadCast(stream);
+
+    GameDataManager::getInstance()->OnOperation(owner_, seatno, CardLogic::GANG_OPERA, card);
+
+    BroadCastNextPlayer(seatno);
+
+    owner_->NewTimer(1, SceneTimerContext::MAJIANG_MOPAI, seat);
+}
+
+void ZhuanZhuanRoomImpl::DoGongGang(Seat* seat, std::string card_name)
+{
+    next_func_ = nullptr;
+
+    auto seatno = seat->seat_no();
+
+    auto active_player_seat = owner_->table_obj()->GetBySeatNo(active_player_);
+    DCHECK(active_player_seat != nullptr);
+    auto card = active_player_seat->data()->mo_card_;
+    DCHECK(card != nullptr);
+
+    auto iter = std::find_if(seat->data()->operated_cards_.begin(), seat->data()->operated_cards_.end(),
+        [card](const std::pair<std::shared_ptr<Card>, OperCardsType> value) {
+        return card->getName() == value.first->getName();
+    });
+    if (iter != seat->data()->operated_cards_.end())
+    {
+        seat->data()->operated_cards_.erase(iter);
+    }
+    seat->data()->gang_gong_num_ += 1;
+    IncrMingtang(seat, MINGTANG_GONGGANG);
+    CalculateScore(seatno, 1);
+
+    seat->data()->operated_cards_.insert(std::make_pair(card, GGANG));
+
+    assistx2::Stream stream(SERVER_BROADCAST_GANG_CARD);
+    stream.Write(seatno);
+    stream.Write(static_cast<std::int32_t>(GGANG));
+    stream.Write(active_player_);
+    stream.Write(card->getName());
+    stream.End();
+
+    owner_->BroadCast(stream);
+
+    GameDataManager::getInstance()->OnOperation(owner_, seatno, CardLogic::GANG_OPERA, card);
+}
+
+void ZhuanZhuanRoomImpl::DoZiMoHu(Seat* seat, std::string card_name)
+{
+    hu_type_ = PrivateRoom::HuType::ZIMOHU;
+
+    auto seatno = seat->seat_no();
+    seat->data()->zimo_num_ += 1;
+    IncrMingtang(seat, MINGTANG_ZIMOHU);
+
+    hu_card_ = seat->data()->mo_card_;
+    if (hu_card_ != nullptr)
+    {
+        CHECK(seat->data()->hand_cards_->RemoveCard(hu_card_) == true);
+    }
+
+    assistx2::Stream stream(SERVER_BROADCAST_HU_CARD);
+    stream.Write(seatno);
+    auto& hand_cards = seat->data()->hand_cards_->hand_cards();
+    stream.Write(static_cast<std::int32_t>(hand_cards.size()));
+    for (auto it : hand_cards)
+    {
+        stream.Write(it->getName());
+    }
+    if (hu_card_ == nullptr)
+    {
+        stream.Write(std::string(""));
+    }
+    else
+    {
+        stream.Write(hu_card_->getName());
+    }
+
+    stream.End();
+
+    owner_->BroadCast(stream);
+
+    zhama_start_seatno_ = seatno;
+}
+
+void ZhuanZhuanRoomImpl::DoDianPaoHu(Seat* seat, std::string card_name)
+{
+    Seat* dianpaoseat = nullptr;
+    if (seat->data()->is_qianggang_hu_ == false)
+    {
+        dianpaoseat = owner_->table_obj()->GetBySeatNo(now_played_seatno_);
+        DCHECK(dianpaoseat != nullptr);
+        hu_card_ = dianpaoseat->data()->played_cards_.top();
+        //dianpaoseat->data()->played_cards_.pop();
+        hu_type_ = PrivateRoom::HuType::DIANPAOHU;
+        beiqiang_seat_ = now_played_seatno_;
+    }
+    else
+    {
+        dianpaoseat = owner_->table_obj()->GetBySeatNo(active_player_);
+        DCHECK(dianpaoseat != nullptr);
+        hu_card_ = dianpaoseat->data()->mo_card_;
+        DCHECK(hu_card_ != nullptr);
+        hu_type_ = PrivateRoom::HuType::QINAGGANGHU;
+        beiqiang_seat_ = active_player_;
+    }
+
+    dianpaoseat->data()->beiqiang_hu_num_ += 1;
+    IncrMingtang(dianpaoseat, MINGTANG_DIANPAO);
+    
+    assistx2::Stream stream(SERVER_BROADCAST_QIANGGANG_HU);
+    stream.Write(seat->seat_no());
+    stream.Write(dianpaoseat->seat_no());
+    stream.Write(hu_card_->getName());
+    auto& hand_cards = seat->data()->hand_cards_->hand_cards();
+    stream.Write(static_cast<std::int32_t>(hand_cards.size()));
+    for (auto it : hand_cards)
+    {
+        stream.Write(it->getName());
+    }
+    stream.End();
+
+    hu_message_.push_back(stream);
+
+    owner_->BroadCast(stream);
+
+    seat->data()->gang_hu_num_ += 1;
+    IncrMingtang(seat, MINGTANG_JIEPAO);
+}
+
+void ZhuanZhuanRoomImpl::AddZhongMaSeats(const std::int32_t seatno, const std::shared_ptr<Card> card)
+{
+    auto it = zhong_ma_seats_.find(seatno);
+    if (it != zhong_ma_seats_.end())
+    {
+        it->second.push_back(card);
+    }
+    else
+    {
+        zhong_ma_seats_.insert(std::make_pair(seatno,
+            std::vector<std::shared_ptr<Card>>(1, card)));
+    }
+}
+
+bool ZhuanZhuanRoomImpl::IsNoOperator()
+{
+    auto seats = owner_->table_obj()->GetSeats();
+    for (auto iter : seats)
+    {
+        if (iter->data()->now_operate_.size() != 0)
+        {
+            return false;
+        }
+    }
+
+    return true;
 }

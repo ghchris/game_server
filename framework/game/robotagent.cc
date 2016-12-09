@@ -18,7 +18,7 @@ const static std::int16_t CLIENT_REQUEST_ONGANG = 1025;//用户杠
 const static std::int16_t CLIENT_REQUEST_ONHU = 1026;//用户胡
 const static std::int16_t SERVER_NOTIFY_MO_CARD = 1028;//通知用户摸牌
 const static std::int16_t SERVER_BROADCAST_GAME_ACCOUNT = 1031;//单局结算
-const static std::int16_t SERVER_BROADCAST_DISBAND_ROOM = 1008;
+const static std::int16_t SERVER_BROADCAST_HAS_BEEN_DISBAND = 1013;
 const static std::int16_t NET_CONNECT_CLOSED = 1999;
 
 class RobotAgentImpl
@@ -80,11 +80,11 @@ bool RobotAgent::Serialize(bool loadorsave)
             return false;
         }
 
-        if (DataLayer::getInstance()->membergame(uid(), pImpl_->member_game_) != 0)
-        {
-            DLOG(INFO) << "membergame failed mid:=" << uid();
-            return false;
-        }
+//         if (DataLayer::getInstance()->membergame(uid(), pImpl_->member_game_) != 0)
+//         {
+//             //DLOG(INFO) << "membergame failed mid:=" << uid();
+//             //return false;
+//         }
     }
     else
     {
@@ -97,10 +97,13 @@ bool RobotAgent::Serialize(bool loadorsave)
 
 
 
-void RobotAgent::SendTo(const assistx2::Stream& packet)
+void RobotAgent::SendTo(const assistx2::Stream& packet, bool needsave)
 {
-    GlobalTimerProxy::getInstance()->NewTimer(
-        std::bind(&RobotAgent::OnMessage, this, packet), 1);
+    if (connect_status() == true)
+    {
+        GlobalTimerProxy::getInstance()->NewTimer(
+            std::bind(&RobotAgent::OnMessage, this, packet), 1);
+    }
 }
 
 void RobotAgent::OnMessage(assistx2::Stream clone)
@@ -129,7 +132,7 @@ void RobotAgent::OnMessage(assistx2::Stream clone)
     case  SERVER_BROADCAST_GAME_ACCOUNT:
         pImpl_->OnGameOver(&clone);
         break;
-    case SERVER_BROADCAST_DISBAND_ROOM:
+    case SERVER_BROADCAST_HAS_BEEN_DISBAND:
         RobotManager::getInstance()->RecoverRobot(shared_from_this());
         pImpl_->Destroy();
         break;

@@ -34,6 +34,11 @@ std::int32_t RoomBase::Leave(std::shared_ptr<Agent > player)
     return SceneBase::Leave(player);
 }
 
+std::int32_t RoomBase::Disband()
+{
+    return 0;
+}
+
 void RoomBase::set_room_state(const RoomState& state)
 {
     pImpl_->room_state_ = state;
@@ -82,6 +87,16 @@ void RoomBase::set_create_time(const time_t time)
 const time_t RoomBase::create_time() const
 {
     return pImpl_->create_time_;
+}
+
+std::string RoomBase::RoomDataToString(bool isContainTableData)
+{
+    return "";
+}
+
+void RoomBase::StringToRoomData(const std::string& str)
+{
+
 }
 
 RoomBaseImpl::RoomBaseImpl()

@@ -62,8 +62,19 @@ std::int32_t Table::Enter(std::shared_ptr<Agent> player, const std::int32_t seat
     }
     else
     {
-        //develop for future,now return a error code
-        return -1;
+        auto seat_obj = GetBySeatNo(seatno);
+        if (seat_obj->seat_state() == Seat::SeatState::EMPTY)
+        {
+            seat = seatno;
+            seat_obj->set_player(player);
+            seat_obj->set_seat_state(Seat::SeatState::USING);
+            seat_obj->set_seat_player_state(Seat::PLAYER_STATUS_WAITING);
+            player->set_seat_no(seatno);
+        }
+        else
+        {
+            return -2;
+        }
     }
 
     pImpl_->player_count_ += 1;

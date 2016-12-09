@@ -89,7 +89,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>E:\myworkspace\framework\framework\algorithm;E:\myworkspace\framework\framework\game;E:\myworkspace\framework\framework\scene;E:\myworkspace\framework\framework\db;E:\myworkspace\framework\framework\src;E:\workspace\lib\protobuf-master\protobuf-master\src;E:\workspace\lib\json;E:\workspace\lib\tinyxml\tinyxml;E:\workspace\lib;E:\workspace\libassistx2\libassistx2\include;E:\workspace\lib\glog-master\glog-master\src\windows;E:\workspace\lib\boost_1_60_0\boost_1_60_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\test;.\algorithm;.\game;.\scene;.\db;.\src;E:\workspace\lib\protobuf-master\protobuf-master\src;E:\workspace\lib\json;E:\workspace\lib\tinyxml\tinyxml;E:\workspace\lib;E:\workspace\libassistx2\libassistx2\include;E:\workspace\lib\glog-master\glog-master\src\windows;E:\workspace\lib\boost_1_60_0\boost_1_60_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -104,6 +104,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>E:\workspace\lib\protobuf-master\protobuf-master\src;E:\workspace\lib;E:\workspace\lib\json;E:\workspace\lib\boost_1_60_0\boost_1_60_0;E:\workspace\libassistx2\libassistx2\include;E:\workspace\game_workspace\majiang\trunk\framework\src;E:\workspace\game_workspace\majiang\trunk\framework\scene;E:\workspace\game_workspace\majiang\trunk\framework\game;E:\workspace\game_workspace\majiang\trunk\framework\db;E:\workspace\game_workspace\majiang\trunk\framework\algorithm;E:\workspace\lib\glog-master\glog-master\src\windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -152,26 +153,37 @@
     <ClCompile Include="algorithm\cardgroup.cc" />
     <ClCompile Include="algorithm\cardlogicbase.cc" />
     <ClCompile Include="algorithm\hzmajianglogic.cc" />
-    <ClCompile Include="algorithm\main.cc" />
     <ClCompile Include="algorithm\majiang.cc" />
+    <ClCompile Include="algorithm\zzmajianglogic.cc" />
+    <ClCompile Include="algorithm\zzmajianglogic_twoplayer.cc" />
     <ClCompile Include="db\datalayer.cc" />
+    <ClCompile Include="db\logserver.cc" />
     <ClCompile Include="db\membercommongame.pb.cc" />
     <ClCompile Include="db\memberfides.pb.cc" />
     <ClCompile Include="db\membergame.pb.cc" />
+    <ClCompile Include="game\gamedatamanager.cc" />
     <ClCompile Include="game\hzmajiangroom.cc" />
     <ClCompile Include="game\privateroom.cc" />
     <ClCompile Include="game\gameconfigdata.cc" />
+    <ClCompile Include="game\robotagent.cc" />
+    <ClCompile Include="game\robotmanager.cc" />
+    <ClCompile Include="game\seatdata.cc" />
+    <ClCompile Include="game\zhuanzhuanroom.cc" />
     <ClCompile Include="main.cc" />
     <ClCompile Include="scene\GameHall.cc" />
     <ClCompile Include="scene\roombase.cc" />
+    <ClCompile Include="scene\scenetimer.cc" />
     <ClCompile Include="scene\scenebase.cc" />
     <ClCompile Include="scene\scenemanager.cc" />
     <ClCompile Include="scene\seat.cc" />
     <ClCompile Include="scene\table.cc" />
     <ClCompile Include="src\agentbase.cc" />
+    <ClCompile Include="src\common.cc" />
     <ClCompile Include="src\configmgr.cc" />
     <ClCompile Include="src\playeragent.cc" />
+    <ClCompile Include="src\timerhelper.cc" />
     <ClCompile Include="src\watchdog.cc" />
+    <ClCompile Include="test\testcardmanager.cc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="algorithm\card.h" />
@@ -182,16 +194,24 @@
     <ClInclude Include="algorithm\cardlogicbase.h" />
     <ClInclude Include="algorithm\hzmajianglogic.h" />
     <ClInclude Include="algorithm\majiang.h" />
+    <ClInclude Include="algorithm\zzmajianglogic.h" />
+    <ClInclude Include="algorithm\zzmajianglogic_twoplayer.h" />
     <ClInclude Include="db\datalayer.h" />
+    <ClInclude Include="db\logserver.h" />
     <ClInclude Include="db\membercommongame.pb.h" />
     <ClInclude Include="db\memberfides.pb.h" />
     <ClInclude Include="db\membergame.pb.h" />
+    <ClInclude Include="game\gamedatamanager.h" />
     <ClInclude Include="game\hzmajiangroom.h" />
     <ClInclude Include="game\privateroom.h" />
     <ClInclude Include="game\gameconfigdata.h" />
+    <ClInclude Include="game\robotagent.h" />
+    <ClInclude Include="game\robotmanager.h" />
     <ClInclude Include="game\seatdata.h" />
+    <ClInclude Include="game\zhuanzhuanroom.h" />
     <ClInclude Include="scene\GameHall.h" />
     <ClInclude Include="scene\roombase.h" />
+    <ClInclude Include="scene\scenetimer.h" />
     <ClInclude Include="scene\scene.h" />
     <ClInclude Include="scene\scenebase.h" />
     <ClInclude Include="scene\scenemanager.h" />
@@ -199,10 +219,13 @@
     <ClInclude Include="scene\table.h" />
     <ClInclude Include="src\agent.h" />
     <ClInclude Include="src\agentbase.h" />
+    <ClInclude Include="src\common.h" />
     <ClInclude Include="src\configmgr.h" />
     <ClInclude Include="src\define.h" />
     <ClInclude Include="src\playeragent.h" />
+    <ClInclude Include="src\timerhelper.h" />
     <ClInclude Include="src\watchdog.h" />
+    <ClInclude Include="test\testcardmanager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

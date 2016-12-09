@@ -5,8 +5,9 @@
 #include "GameHall.h"
 #include "gameconfigdata.h"
 #include "hzmajiangroom.h"
-#include "robotmanager.h"
+#include "zhuanzhuanroom.h"
 #include "scenetimer.h"
+#include "gamedatamanager.h"
 
 class SceneManagerImpl
 {
@@ -23,7 +24,6 @@ public:
 SceneManager::SceneManager():
  pImpl_(new SceneManagerImpl)
 {
-
 }
 
 SceneManager::~SceneManager()
@@ -42,7 +42,7 @@ SceneManager::~SceneManager()
     pImpl_->rooms_.clear();
 }
 
-bool SceneManager::Initialize(boost::asio::io_service & ios)
+bool SceneManager::Initialize(boost::asio::io_service & ios,WatchDog* obj)
 {
     auto scene_timer = std::make_shared<SceneTimer>(ios);
     if (scene_timer == nullptr || scene_timer->Init() != 0)
@@ -54,6 +54,7 @@ bool SceneManager::Initialize(boost::asio::io_service & ios)
     if (pImpl_->game_hall_ != nullptr)
     {
         pImpl_->game_hall_->set_scene_timer(scene_timer);
+        pImpl_->game_hall_->set_watchdog_obj(obj);
     }
 
 
@@ -70,6 +71,16 @@ bool SceneManager::Initialize(boost::asio::io_service & ios)
                 room = new HzMajiangRoom(i,iter->type);
                 room->set_room_config_data(iter);
                 room->set_scene_timer(scene_timer);
+                room->set_watchdog_obj(obj);
+                GameDataManager::getInstance()->ResetRoomData(room);
+            }
+            else if (iter->type == "2")
+            {
+                room = new ZhuanZhuanRoom(i, iter->type);
+                room->set_room_config_data(iter);
+                room->set_scene_timer(scene_timer);
+                room->set_watchdog_obj(obj);
+                GameDataManager::getInstance()->ResetRoomData(room);
             }
             else
             {
@@ -100,13 +111,15 @@ Scene* SceneManager::default_scene()
 
 RoomBase* SceneManager::GetRoomByType(const std::string& type, std::int32_t ju)
 {
-    DLOG(ERROR) << "GetRoomByType type:=" << type << " ju:=" << ju;
+    DLOG(INFO) << "GetRoomByType type:=" << type << " ju:=" << ju;
 
     auto iter = pImpl_->room_groups_.find(type);
     if (iter == pImpl_->room_groups_.end())
     {
         return nullptr;
     }
+
+    std::random_shuffle(iter->second.begin(), iter->second.end());
 
     for (auto room : iter->second)
     {
@@ -131,11 +144,10 @@ void SceneManager::AttachActivedPrivateRoom(RoomBase* room)
     {
         pImpl_->actived_private_rooms_.insert(std::make_pair(
             room->scene_id(),room));
-        RobotManager::getInstance()->AttachRobot(room);
     }
     else
     {
-        DLOG(ERROR) << "AttachActivedPrivateRoom: room:=" << room->scene_id()
+        LOG(ERROR) << "AttachActivedPrivateRoom: room:=" << room->scene_id()
             << "already in actived_private_rooms!";
     }
 }
@@ -149,7 +161,7 @@ void SceneManager::DetachActivedPrivateRoom(RoomBase* room)
     }
     else
     {
-        DLOG(ERROR) << "DetachActivedPrivateRoom: room:=" << room->scene_id()
+        LOG(ERROR) << "DetachActivedPrivateRoom: room:=" << room->scene_id()
             << "was not found in actived_private_rooms";
     }
 }

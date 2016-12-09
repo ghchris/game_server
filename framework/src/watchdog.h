@@ -13,6 +13,7 @@
 //WatchDog 用来管理用户连接,用户消息分配
 //为一个新的连接创建一个agnet
 
+class Agent;
 class WatchDogImpl;
 class WatchDog
 {
@@ -24,6 +25,8 @@ public:
 
     //将不在游戏中的anget移除，具体操作交由各场景来管理
     void RemoveAgent(uid_type uid);
+    std::shared_ptr<Agent> NewAgent(uid_type uid);
+    std::shared_ptr<Agent> GetAgentByID(uid_type uid);
 private:
     DISALLOW_COPY_AND_ASSIGN(WatchDog);
 private:

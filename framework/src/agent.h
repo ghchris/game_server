@@ -31,7 +31,7 @@ public:
     virtual void Process(assistx2::Stream * packet) = 0;
 
     //发消息给客户端
-    virtual void SendTo(const assistx2::Stream& packet) = 0;
+    virtual void SendTo(const assistx2::Stream& packet,bool needsave = false) = 0;
 
     //支付金币
     virtual bool GoldPay(const std::int64_t gold, 

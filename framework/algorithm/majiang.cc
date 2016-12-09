@@ -3,12 +3,12 @@
 
 static const char face_symbols[] =
 {
-    '1', '2', '3', '4', '5', '6', '7', '8', '9','H'
+    '1', '2', '3', '4', '5', '6', '7', '8', '9','H','F','B','E','S','W','N'
 };
 
 static const char type_symbols[] =
 {
-    'T', 'S', 'W','Z'
+    'T', 'S', 'W','Z','F'
 };
 
 Majiang::Majiang(Face face, Type  type)

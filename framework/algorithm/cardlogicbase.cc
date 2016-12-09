@@ -11,7 +11,7 @@ public:
 
     bool AnalyzeNormal(int[]);
     bool AnalyzeJiang(int[]);
-    bool AnalyzeDui(int[],int hz);
+    bool AnalyzeDui(int[],int& hz);
 public:
     CardLogicBase* owner_;
 };
@@ -28,11 +28,42 @@ CardLogicBase::~CardLogicBase()
 
 }
 
+bool CardLogicBase::CheckChi(const std::shared_ptr<Card> card,
+    const std::shared_ptr<CardGroup> cardgroup)
+{
+    auto prev_count = 0;
+    auto next_count = 0;
+    auto& cards = cardgroup->hand_cards_info();
+    for (auto iter : cards)
+    {
+        if (card->getType() != iter.card->getType())
+        {
+            continue;
+        }
+        if ((iter.card->getFace() == card->getFace() - 2) ||
+            (iter.card->getFace() == card->getFace() - 1))
+        {
+            prev_count += 1;
+        }
+
+        if ((iter.card->getFace() == card->getFace() + 1) ||
+            (iter.card->getFace() == card->getFace() + 2))
+        {
+            next_count += 1;
+        }
+
+        if (prev_count == 2 || next_count == 2)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool CardLogicBase::CheckPeng(const std::shared_ptr<Card> card,
     const std::shared_ptr<CardGroup> cardgroup)
 {
-    DLOG(INFO) << "CheckPeng card:" << card->getName()
-        << ",cards:=" << cardgroup->hand_cards();
     if (cardgroup->card_count(card) >= 2)
     {
         return true;
@@ -46,7 +77,6 @@ bool CardLogicBase::CheckGang(const std::shared_ptr<Card> card,
 {
     if (card == nullptr)
     {
-        DLOG(INFO) << "CheckGang cards:"  << cardgroup->hand_cards();
         auto cards_info = cardgroup->hand_cards_info();
         for (auto iter : cards_info)
         {
@@ -58,8 +88,6 @@ bool CardLogicBase::CheckGang(const std::shared_ptr<Card> card,
     }
     else
     {
-        DLOG(INFO) << "CheckGang card:" << card->getName()
-            << ",cards:=" << cardgroup->hand_cards();
         if (cardgroup->card_count(card) == 3)
         {
             return true;
@@ -152,6 +180,7 @@ bool CardLogicBase::IsHu()
         }
     }
 
+    DCHECK(nJiangPos != -1);
     //该类牌中要包含将,	因为要对将进行轮询,	效率较低,放在最后 
     return pImpl_->AnalyzeJiang(cards_array[nJiangPos]);
 }
@@ -189,9 +218,10 @@ bool CardLogicBase::IsTing(std::int32_t need_card)
 
 bool CardLogicBase::is7Dui(std::int32_t hz_card)
 {
+    auto hz = hz_card;
     for (int i = 0; i < 3; i++)
     {
-        if (!pImpl_->AnalyzeDui(cards_array[i], hz_card))
+        if (!pImpl_->AnalyzeDui(cards_array[i], hz))
         {
             return false;
         }
@@ -264,7 +294,7 @@ bool CardLogicBaseImpl::AnalyzeNormal(int aKindPai[])
     return false;
 }
 
-bool CardLogicBaseImpl::AnalyzeDui(int aKindPai[],int hz)
+bool CardLogicBaseImpl::AnalyzeDui(int aKindPai[],int& hz)
 {
     if (aKindPai[0] == 0)
     {

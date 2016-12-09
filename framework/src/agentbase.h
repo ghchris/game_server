@@ -16,7 +16,7 @@ public:
 
     virtual void Process(assistx2::Stream * packet);
 
-    virtual void SendTo(const assistx2::Stream& packet);
+    virtual void SendTo(const assistx2::Stream& packet, bool needsave = false);
 
     virtual bool GoldPay(const std::int64_t gold,
         const std::int32_t pay_type);

@@ -5,6 +5,7 @@
 #include <memory>
 #include <assistx2/singleton.h>
 
+class WatchDog;
 class RoomBase;
 class SceneManagerImpl;
 class SceneManager:public Singleton<SceneManager >
@@ -13,7 +14,7 @@ public:
     SceneManager();
     virtual ~SceneManager();
 
-    bool Initialize(boost::asio::io_service & ios);
+    bool Initialize(boost::asio::io_service & ios, WatchDog* obj);
 
     Scene* default_scene();
     RoomBase* GetRoomByType(const std::string& type,std::int32_t ju);

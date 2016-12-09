@@ -1,5 +1,6 @@
 #include "scenebase.h"
 #include "agent.h"
+#include "watchdog.h"
 
 class SceneBaseImpl
 {
@@ -11,6 +12,7 @@ public:
     std::uint32_t scene_id_ = 0;
     std::string scene_type_ = "";
     std::shared_ptr<SceneTimer> scene_timer_ = nullptr;
+    WatchDog* watch_dog_ = nullptr;
 };
 
 SceneBase::SceneBase(std::uint32_t id, std::string type):
@@ -59,17 +61,13 @@ std::int32_t SceneBase::Leave(std::shared_ptr<Agent > player)
     return 0;
 }
 
-void SceneBase::BroadCast(assistx2::Stream & packet,std::shared_ptr<Agent > exclude)
+void SceneBase::BroadCast(assistx2::Stream & packet,std::shared_ptr<Agent > exclude, bool needsave)
 {
     for (auto iter : pImpl_->players_agent_)
     {
-        if (iter.second->connect_status() == false)
-        {
-            continue;
-        }
         if (exclude == nullptr || exclude->uid() != iter.second->uid())
         {
-            iter.second->SendTo(packet);
+            iter.second->SendTo(packet, needsave);
         }
     }
 }
@@ -82,6 +80,16 @@ const std::uint32_t SceneBase::scene_id() const
 const std::string SceneBase::scene_type() const
 {
     return pImpl_->scene_type_;
+}
+
+void SceneBase::set_watchdog_obj(WatchDog* obj)
+{
+    pImpl_->watch_dog_ = obj;
+}
+
+WatchDog* SceneBase::watchdog_obj()
+{
+    return pImpl_->watch_dog_;
 }
 
 void SceneBase::set_scene_timer(std::shared_ptr<SceneTimer> obj)

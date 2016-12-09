@@ -22,6 +22,7 @@ public:
     const std::uint32_t server_id() const;
     const std::string& pid_file_path() const;
     const DBConfig_type& db_config() const;
+    const std::string server_version() const;
 private:
     std::unique_ptr< ConfigMgrImpl > pImpl_;
 };

@@ -19,6 +19,9 @@
     <Filter Include="algorithm">
       <UniqueIdentifier>{d75dde59-36f3-4471-973a-411b3d9c4ded}</UniqueIdentifier>
     </Filter>
+    <Filter Include="test">
+      <UniqueIdentifier>{9be5e505-a3a3-4478-9a7b-4513e62410d9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\watchdog.cc">
@@ -88,10 +91,43 @@
     <ClCompile Include="algorithm\hzmajianglogic.cc">
       <Filter>algorithm</Filter>
     </ClCompile>
-    <ClCompile Include="algorithm\main.cc">
+    <ClCompile Include="algorithm\majiang.cc">
       <Filter>algorithm</Filter>
     </ClCompile>
-    <ClCompile Include="algorithm\majiang.cc">
+    <ClCompile Include="game\robotagent.cc">
+      <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="game\robotmanager.cc">
+      <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="src\timerhelper.cc">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="scene\scenetimer.cc">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="game\seatdata.cc">
+      <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="game\gamedatamanager.cc">
+      <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common.cc">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="db\logserver.cc">
+      <Filter>db</Filter>
+    </ClCompile>
+    <ClCompile Include="test\testcardmanager.cc">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="game\zhuanzhuanroom.cc">
+      <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="algorithm\zzmajianglogic.cc">
+      <Filter>algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="algorithm\zzmajianglogic_twoplayer.cc">
       <Filter>algorithm</Filter>
     </ClCompile>
   </ItemGroup>
@@ -182,6 +218,39 @@
     </ClInclude>
     <ClInclude Include="game\seatdata.h">
       <Filter>game</Filter>
+    </ClInclude>
+    <ClInclude Include="game\robotagent.h">
+      <Filter>game</Filter>
+    </ClInclude>
+    <ClInclude Include="game\robotmanager.h">
+      <Filter>game</Filter>
+    </ClInclude>
+    <ClInclude Include="src\timerhelper.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="scene\scenetimer.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="game\gamedatamanager.h">
+      <Filter>game</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="db\logserver.h">
+      <Filter>db</Filter>
+    </ClInclude>
+    <ClInclude Include="test\testcardmanager.h">
+      <Filter>test</Filter>
+    </ClInclude>
+    <ClInclude Include="game\zhuanzhuanroom.h">
+      <Filter>game</Filter>
+    </ClInclude>
+    <ClInclude Include="algorithm\zzmajianglogic.h">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="algorithm\zzmajianglogic_twoplayer.h">
+      <Filter>algorithm</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

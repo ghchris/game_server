@@ -11,7 +11,7 @@ public:
     virtual ~RobotAgent();
 
     virtual bool Serialize(bool loadorsave);
-    virtual void SendTo(const assistx2::Stream& packet);
+    virtual void SendTo(const assistx2::Stream& packet, bool needsave = false);
 
     virtual MemberCommonGame* member_common_game();
     virtual MemberFides* member_fides();

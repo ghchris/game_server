@@ -8,6 +8,7 @@
 #include "configmgr.h"
 #include "watchdog.h"
 #include "datalayer.h"
+#include "testcardmanager.h"
 
 DEFINE_string(cfg, "", "cfg file path.");
 
@@ -23,6 +24,11 @@ static bool ValidateCfg(const char * flagname, const std::string & value)
     {
         return true;
     }
+}
+
+void CustomSignalHander(const int sig)
+{
+    TestCardManager::getInstance()->Update();
 }
 
 void SignalHandle(const char* data, int size)
@@ -58,6 +64,11 @@ int main(int argc, char ** argv)
         LOG(INFO) << "DataLayer Failed";
         return 0;
     }
+
+#if !_WIN32
+    if (signal(SIGUSR1, CustomSignalHander) == SIG_ERR)
+        fprintf(stderr, "can not catch SIGUSR1");
+#endif
 
     char path[512] = { 0 };
 
