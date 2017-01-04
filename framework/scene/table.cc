@@ -50,7 +50,8 @@ std::int32_t Table::Enter(std::shared_ptr<Agent> player, const std::int32_t seat
                 seat = iter->seat_no();
                 iter->set_player( player );
                 iter->set_seat_state( Seat::SeatState::USING );
-                iter->set_seat_player_state( Seat::PLAYER_STATUS_WAITING );
+                auto state = ((iter->seat_player_state() & Seat::PLAYER_STATUS_NET_CLOSE) | Seat::PLAYER_STATUS_WAITING);
+                iter->set_seat_player_state(state);
                 player->set_seat_no(seat);
                 break;
             }
@@ -68,7 +69,8 @@ std::int32_t Table::Enter(std::shared_ptr<Agent> player, const std::int32_t seat
             seat = seatno;
             seat_obj->set_player(player);
             seat_obj->set_seat_state(Seat::SeatState::USING);
-            seat_obj->set_seat_player_state(Seat::PLAYER_STATUS_WAITING);
+            auto state = ((seat_obj->seat_player_state() & Seat::PLAYER_STATUS_NET_CLOSE) | Seat::PLAYER_STATUS_WAITING);
+            seat_obj->set_seat_player_state(state);
             player->set_seat_no(seatno);
         }
         else

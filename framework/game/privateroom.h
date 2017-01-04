@@ -8,8 +8,8 @@ class PrivateRoomImpl;
 class PrivateRoom:public RoomBase
 {
 public:
-    //0:臭壮,1:自摸,2:抢杠胡,3:强制解散
-    enum class HuType{CHOUZHUANG,ZIMOHU,QINAGGANGHU,NOTPLAYED,DIANPAOHU};
+    //0:臭壮,1:自摸,2:抢杠胡,3:强制解散,4:点炮胡,5:海底胡,6:海底炮,7:杠上花,8:杠上炮
+    enum class HuType{CHOUZHUANG,ZIMOHU,QINAGGANGHU,NOTPLAYED,DIANPAOHU,HAIDIHU,HAIDIPAO,GANGHU,GANGPAO};
     //0:牌局已打玩,1:解散超时,2:所有人同意解散
     enum class DisbandType {NUM_NULL,TIME_OUT,ALL_AGREE,NOT_START};
 public:

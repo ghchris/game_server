@@ -26,6 +26,12 @@ void Data::ClearNowGameData()
     operated_cards_.clear();
     mingtang_types_.clear();
     is_qianggang_hu_ = false;
+    cs_now_operate_.clear();
+    guo_cards_.clear();
+    is_ting = false;
+    gang_card_ = nullptr;
+    card_now_operates_.clear();
+    now_mingtang_operate_.clear();
     while (!played_cards_.empty())
     {
         played_cards_.pop();
@@ -78,6 +84,36 @@ void Data::set_string_to_seat_data(std::string json)
             seat_score_ = assistx2::ToInt32(iter.value_);
             continue;
         }
+        if (iter.name_ == "dahu_zimo")
+        {
+            dahu_zimo_ = assistx2::ToInt32(iter.value_);
+            continue;
+        }
+        if (iter.name_ == "xiaohu_zimo")
+        {
+            xiaohu_zimo_ = assistx2::ToInt32(iter.value_);
+            continue;
+        }
+        if (iter.name_ == "dahu_dianpao")
+        {
+            dahu_dianpao_ = assistx2::ToInt32(iter.value_);
+            continue;
+        }
+        if (iter.name_ == "xiaohu_dianpao")
+        {
+            xiaohu_dianpao_ = assistx2::ToInt32(iter.value_);
+            continue;
+        }
+        if (iter.name_ == "dahu_jiepao")
+        {
+            dahu_jiepao_ = assistx2::ToInt32(iter.value_);
+            continue;
+        }
+        if (iter.name_ == "xiaohu_jiepao")
+        {
+            xiaohu_jiepao_ = assistx2::ToInt32(iter.value_);
+            continue;
+        }
     }
 }
 
@@ -91,6 +127,20 @@ std::string Data::seat_string_data()
     root.push_back(json_spirit::Pair("gang_hu_num", gang_hu_num_));
     root.push_back(json_spirit::Pair("beiqiang_hu_num", beiqiang_hu_num_));
     root.push_back(json_spirit::Pair("zimo_num", zimo_num_));
+    root.push_back(json_spirit::Pair("seat_score", seat_score_));
+
+    return json_spirit::write_string(json_spirit::Value(root));
+}
+
+std::string Data::cs_seat_string_data()
+{
+    json_spirit::Object root;
+    root.push_back(json_spirit::Pair("dahu_zimo", dahu_zimo_));
+    root.push_back(json_spirit::Pair("xiaohu_zimo", xiaohu_zimo_));
+    root.push_back(json_spirit::Pair("dahu_dianpao", dahu_dianpao_));
+    root.push_back(json_spirit::Pair("xiaohu_dianpao", xiaohu_dianpao_));
+    root.push_back(json_spirit::Pair("dahu_jiepao", dahu_jiepao_));
+    root.push_back(json_spirit::Pair("xiaohu_jiepao", xiaohu_jiepao_));
     root.push_back(json_spirit::Pair("seat_score", seat_score_));
 
     return json_spirit::write_string(json_spirit::Value(root));

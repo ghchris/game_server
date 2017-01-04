@@ -11,6 +11,7 @@ const static std::int16_t SERVER__UPDATE_GOLD = 1086;
 const static std::int16_t SERVER_BROADCAST_GAME_ACCOUNT = 1031;//单局结算
 const static std::int16_t SERVER_BROADCAST_ROOM_ACCOUNT = 1035;//服务器广播总结算
 const static std::int16_t SERVER_BROADCAST_HAS_BEEN_DISBAND = 1013;
+const static std::int16_t CLIENT_SET_GPS = 8001;
 
 class PlayerAgentImpl
 {
@@ -78,6 +79,11 @@ void PlayerAgent::Process(assistx2::Stream * packet)
     case SERVER_BROADCAST_ROOM_ACCOUNT:
     case SERVER_BROADCAST_HAS_BEEN_DISBAND:
         return GameDataManager::getInstance()->DeleteCmdStream(uid(),cmd);
+    case CLIENT_SET_GPS:
+    {
+        auto str = packet->Read<std::string>();
+        return set_gps(str);
+    }
     default:
         break;
     }

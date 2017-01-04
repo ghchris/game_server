@@ -152,6 +152,7 @@
     <ClCompile Include="algorithm\cardgenerator.cc" />
     <ClCompile Include="algorithm\cardgroup.cc" />
     <ClCompile Include="algorithm\cardlogicbase.cc" />
+    <ClCompile Include="algorithm\csmajianglogic.cpp" />
     <ClCompile Include="algorithm\hzmajianglogic.cc" />
     <ClCompile Include="algorithm\majiang.cc" />
     <ClCompile Include="algorithm\zzmajianglogic.cc" />
@@ -161,6 +162,7 @@
     <ClCompile Include="db\membercommongame.pb.cc" />
     <ClCompile Include="db\memberfides.pb.cc" />
     <ClCompile Include="db\membergame.pb.cc" />
+    <ClCompile Include="game\changsharoom.cc" />
     <ClCompile Include="game\gamedatamanager.cc" />
     <ClCompile Include="game\hzmajiangroom.cc" />
     <ClCompile Include="game\privateroom.cc" />
@@ -192,6 +194,7 @@
     <ClInclude Include="algorithm\cardgroup.h" />
     <ClInclude Include="algorithm\cardlogic.h" />
     <ClInclude Include="algorithm\cardlogicbase.h" />
+    <ClInclude Include="algorithm\csmajianglogic.h" />
     <ClInclude Include="algorithm\hzmajianglogic.h" />
     <ClInclude Include="algorithm\majiang.h" />
     <ClInclude Include="algorithm\zzmajianglogic.h" />
@@ -201,6 +204,7 @@
     <ClInclude Include="db\membercommongame.pb.h" />
     <ClInclude Include="db\memberfides.pb.h" />
     <ClInclude Include="db\membergame.pb.h" />
+    <ClInclude Include="game\changsharoom.h" />
     <ClInclude Include="game\gamedatamanager.h" />
     <ClInclude Include="game\hzmajiangroom.h" />
     <ClInclude Include="game\privateroom.h" />

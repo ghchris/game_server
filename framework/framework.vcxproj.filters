@@ -130,6 +130,12 @@
     <ClCompile Include="algorithm\zzmajianglogic_twoplayer.cc">
       <Filter>algorithm</Filter>
     </ClCompile>
+    <ClCompile Include="game\changsharoom.cc">
+      <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="algorithm\csmajianglogic.cpp">
+      <Filter>algorithm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\agent.h">
@@ -250,6 +256,12 @@
       <Filter>algorithm</Filter>
     </ClInclude>
     <ClInclude Include="algorithm\zzmajianglogic_twoplayer.h">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="game\changsharoom.h">
+      <Filter>game</Filter>
+    </ClInclude>
+    <ClInclude Include="algorithm\csmajianglogic.h">
       <Filter>algorithm</Filter>
     </ClInclude>
   </ItemGroup>

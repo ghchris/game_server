@@ -9,6 +9,7 @@
 #include <map>
 #include <set>
 #include "card.h"
+#include "seatdata.h"
 
 class Card;
 class RoomBase;
@@ -31,7 +32,7 @@ public:
     void Initialize(WatchDog* wtachdog);
     void OnGameStart(RoomBase* room);
     void OnOperation(RoomBase* room,std::int32_t seatno,
-        CardLogic::OperationType operation, std::shared_ptr< Card >card);
+        CardLogic::OperationType operation, std::shared_ptr< Card >card, MingTangType type = MINGTANG_NULL);
     void OnGameOver(RoomBase* room);
     void OnZhaMa(RoomBase* room,const Cards& card);
     void OnLogin(std::int32_t gp,uid_type mid);

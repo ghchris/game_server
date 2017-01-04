@@ -67,6 +67,9 @@ public:
     virtual void set_seat_no(const std::int32_t seatno) = 0;
     virtual const std::int32_t seat_no() const = 0;
 
+    virtual void set_gps(const std::string) = 0;
+    virtual const std::string gps() const = 0;
+
     virtual MemberCommonGame* member_common_game() = 0;
     virtual MemberFides* member_fides() = 0;
     virtual MemberGame* member_game() = 0;

@@ -6,6 +6,7 @@
 #include "gameconfigdata.h"
 #include "hzmajiangroom.h"
 #include "zhuanzhuanroom.h"
+#include "changsharoom.h"
 #include "scenetimer.h"
 #include "gamedatamanager.h"
 
@@ -14,6 +15,7 @@ class SceneManagerImpl
 public:
     SceneManagerImpl();
     ~SceneManagerImpl();
+    std::int32_t GetRoundRoomID();
 public:
     GameHall* game_hall_;
     std::map<std::int32_t, RoomBase * > rooms_;
@@ -66,9 +68,11 @@ bool SceneManager::Initialize(boost::asio::io_service & ios,WatchDog* obj)
         RoomBase* room = nullptr;
         for (std::int32_t i = iter->begin; i <= iter->end; ++i)
         {
+            auto id = pImpl_->GetRoundRoomID();
             if (iter->type == "1")
             {
-                room = new HzMajiangRoom(i,iter->type);
+                room = new HzMajiangRoom(id,iter->type);
+                room->set_room_index(i);
                 room->set_room_config_data(iter);
                 room->set_scene_timer(scene_timer);
                 room->set_watchdog_obj(obj);
@@ -76,7 +80,17 @@ bool SceneManager::Initialize(boost::asio::io_service & ios,WatchDog* obj)
             }
             else if (iter->type == "2")
             {
-                room = new ZhuanZhuanRoom(i, iter->type);
+                room = new ZhuanZhuanRoom(id, iter->type);
+                room->set_room_index(i);
+                room->set_room_config_data(iter);
+                room->set_scene_timer(scene_timer);
+                room->set_watchdog_obj(obj);
+                GameDataManager::getInstance()->ResetRoomData(room);
+            }
+            else if (iter->type == "3")
+            {
+                room = new ChangShaRoom(id, iter->type);
+                room->set_room_index(i);
                 room->set_room_config_data(iter);
                 room->set_scene_timer(scene_timer);
                 room->set_watchdog_obj(obj);
@@ -87,7 +101,7 @@ bool SceneManager::Initialize(boost::asio::io_service & ios,WatchDog* obj)
                 continue;
             }
 
-            pImpl_->rooms_.insert(std::make_pair(i, room));
+            pImpl_->rooms_.insert(std::make_pair(id, room));
 
             auto it = pImpl_->room_groups_.find(iter->type);
             if (it != pImpl_->room_groups_.end())
@@ -183,4 +197,23 @@ SceneManagerImpl::SceneManagerImpl()
 
 SceneManagerImpl::~SceneManagerImpl()
 {
+}
+
+std::int32_t SceneManagerImpl::GetRoundRoomID()
+{
+    auto id = rand() % 800000 + 100000;
+    while (1)
+    {
+        auto iter = rooms_.find(id);
+        if (iter != rooms_.end())
+        {
+            id = rand() % 800000 + 100000;
+        }
+        else
+        {
+            break;
+        }
+    }
+    
+    return id;
 }

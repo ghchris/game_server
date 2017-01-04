@@ -36,6 +36,9 @@ public:
 
     void set_create_time(const time_t time);
     const time_t create_time() const;
+
+    void set_room_index(const std::int32_t index);
+    const std::int32_t room_index() const;
 private:
     std::unique_ptr< RoomBaseImpl > pImpl_;
 };

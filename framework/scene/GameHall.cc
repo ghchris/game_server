@@ -8,6 +8,7 @@
 #include "scenemanager.h"
 #include "hzmajiangroom.h"
 #include "zhuanzhuanroom.h"
+#include "changsharoom.h"
 #include "gameconfigdata.h"
 #include "robotmanager.h"
 #include "timerhelper.h"
@@ -151,7 +152,7 @@ void GameHallImpl::OnCreateRoom(std::shared_ptr<Agent > player, assistx2::Stream
     SceneManager::getInstance()->AttachActivedPrivateRoom(room);
 
     DataLayer::getInstance()->set_room_data_to_cache(
-        room->scene_id(), room->RoomDataToString(true));
+        room->room_index(), room->RoomDataToString(true));
 
     GlobalTimerProxy::getInstance()->NewTimer(
         std::bind(&RobotManager::AttachRobot, RobotManager::getInstance(), room), 1);
@@ -234,6 +235,14 @@ bool GameHallImpl::SetRoomParam(std::shared_ptr<Agent > player, const std::strin
         zzroom->set_playtype(play_type);
         zzroom->set_playlogic(players);
         zzroom->set_proxy_uid(proxy_uid);
+    }
+    else if (type == "3")
+    {
+        auto csroom = dynamic_cast<ChangShaRoom*>(room);
+        csroom->set_table_obj(std::make_shared<Table>(players));
+        csroom->set_operation(operation);
+        csroom->set_zhama_num(zhuaniao);
+        csroom->set_proxy_uid(proxy_uid);
     }
 
     return true;

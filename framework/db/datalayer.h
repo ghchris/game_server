@@ -29,6 +29,8 @@ public:
 
     bool proxy_mid(const uid_type mid,std::string& data);
 
+    bool player_ip_addr(const uid_type mid, std::string& data);
+
     std::int32_t membercommongame(uid_type mid,MemberCommonGame& info,bool forcedflush = false);
     std::int32_t memberfides(uid_type mid, MemberFides& info, bool forcedflush = false);
     std::int32_t membergame(uid_type mid, MemberGame& info, bool forcedflush = false);

@@ -89,7 +89,7 @@ public:
     std::map<std::int32_t, std::vector<std::shared_ptr<Card>>> zhong_ma_seats_;
     std::shared_ptr<Card> hu_card_ = nullptr;//胡的牌
     std::int32_t room_operation_ = 0;//房间选项 1为7对胡
-    std::vector<std::int32_t> zhama_value_{ 2,3,4 };
+    std::vector<std::int32_t> zhama_value_{0,2,3,4,6 };
     std::vector<std::shared_ptr<Card>> vec_niao_;
     PrivateRoom::HuType hu_type_ = PrivateRoom::HuType::CHOUZHUANG;
     time_t now_active_time_ = 0;
@@ -225,7 +225,8 @@ void HzMajiangRoom::OnGameStart()
         DCHECK(iter->player() != nullptr);
         iter->player()->SendTo(package);
 
-        iter->set_seat_player_state(Seat::PLAYER_STATUS_PLAYING);
+        auto state = ((iter->seat_player_state() & Seat::PLAYER_STATUS_NET_CLOSE) | Seat::PLAYER_STATUS_PLAYING);
+        iter->set_seat_player_state(state);
 
         iter->data()->hand_cards_ = std::make_shared<CardGroup>(cards);
         iter->data()->start_playing_time_ = time(nullptr);
@@ -528,7 +529,7 @@ void HzMajiangRoom::StringToRoomData(const std::string& str)
         }
         if (iter.name_ == "zhama")
         {
-            pImpl_->zhama_num_ = assistx2::ToInt32(iter.value_);
+            set_zhama_num(assistx2::ToInt32(iter.value_));
             continue;
         }
     }
@@ -573,6 +574,9 @@ void HzMajiangRoomImpl::NotifyOperation(std::int32_t seatno,
     DCHECK(seat->player() != nullptr);
 
     seat->data()->now_operate_ = operate;
+    std::stringstream ss;
+    ss << seat->player()->uid() << "_" << owner_->scene_id() << "_" << (rand() % 100000 + 1);
+    seat->data()->operation_id_ =  ss.str() ;
 
     assistx2::Stream package(SERVER_NOTIFY_OPERATE);
     package.Write(seatno);
@@ -583,6 +587,7 @@ void HzMajiangRoomImpl::NotifyOperation(std::int32_t seatno,
         DLOG(INFO) << "NotifyOperation: roomid:=" << owner_->scene_id() << 
             ",mid:=" << seat->player()->uid() << ",operate:=" << iter;
     }
+    package.Write(seat->data()->operation_id_);
     package.End();
 
     seat->player()->SendTo(package);   
@@ -590,19 +595,22 @@ void HzMajiangRoomImpl::NotifyOperation(std::int32_t seatno,
 
 void HzMajiangRoomImpl::OnPlay(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
-    if (active_player_ != now_operator_)
-    {
-        LOG(ERROR) << "OnPlay:active_player_ != now_operator_ Failed roomid:=" 
-            << owner_->scene_id() << ",mid:=" << player->uid();
-        SendErrorCode(player, CLIENT_REQUEST_ONPLAY, -1);
-        return;
-    }
+    auto card_name = packet->Read<std::string>();
+    auto operation_id = packet->Read<std::string>();
 
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
 
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
     DCHECK(seat != nullptr);
+
+    if (operation_id != seat->data()->operation_id_)
+    {
+        LOG(ERROR) << "OnPlay: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
+            << ",operation_id: -->" << operation_id << " != " << seat->data()->operation_id_;
+        //SendErrorCode(player, CLIENT_REQUEST_ONPLAY, -1);
+        return;
+    }
 
     if (!CheckOperation(seat, CardLogic::PLAY_OPERA))
     {
@@ -612,7 +620,6 @@ void HzMajiangRoomImpl::OnPlay(std::shared_ptr<Agent > player, assistx2::Stream 
         return;
     }
    
-    auto card_name = packet->Read<std::string>();
     auto card = CardFactory::MakeMajiangCard(card_name);
     if (card == nullptr)
     {
@@ -648,19 +655,21 @@ void HzMajiangRoomImpl::OnPlay(std::shared_ptr<Agent > player, assistx2::Stream 
 
 void HzMajiangRoomImpl::OnPeng(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
-    if (active_player_ == now_operator_)
-    {
-        LOG(ERROR) << "OnPeng:active_player_ == now_operator_ Failed roomid:=" 
-            << owner_->scene_id() << ",mid:=" << player->uid();
-        SendErrorCode(player, CLIENT_REQUEST_ONPENG, -1);
-        return;
-    }
+    auto operation_id = packet->Read<std::string>();
 
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
 
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
     DCHECK(seat != nullptr);
+
+    if (operation_id != seat->data()->operation_id_)
+    {
+        LOG(ERROR) << "OnPeng: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
+            << ",operation_id: -->" << operation_id << " != " << seat->data()->operation_id_;
+        //SendErrorCode(player, CLIENT_REQUEST_ONPENG, -1);
+        return;
+    }
 
     if (!CheckOperation(seat, CardLogic::PENG_OPERA))
     {
@@ -703,11 +712,22 @@ void HzMajiangRoomImpl::OnPeng(std::shared_ptr<Agent > player, assistx2::Stream 
 
 void HzMajiangRoomImpl::OnGang(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
+    auto card_name = packet->Read<std::string>();
+    auto operation_id = packet->Read<std::string>();
+
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
 
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
     DCHECK(seat != nullptr);
+
+    if (operation_id != seat->data()->operation_id_)
+    {
+        LOG(ERROR) << "OnGang: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
+            << ",operation_id: -->" << operation_id << " != " << seat->data()->operation_id_;
+        //SendErrorCode(player, CLIENT_REQUEST_ONGANG, -1);
+        return;
+    }
 
     if (!CheckOperation(seat, CardLogic::GANG_OPERA))
     {
@@ -723,7 +743,6 @@ void HzMajiangRoomImpl::OnGang(std::shared_ptr<Agent > player, assistx2::Stream 
     if (active_player_ == now_operator_)
     {
         operaseat = seat;
-        auto card_name = packet->Read<std::string>();
         auto card_recv = CardFactory::MakeMajiangCard(card_name);
         if (card_recv != nullptr && 
             seat->data()->hand_cards_->card_count(card_recv) == 4)
@@ -755,7 +774,8 @@ void HzMajiangRoomImpl::OnGang(std::shared_ptr<Agent > player, assistx2::Stream 
                     continue;
                 }
                 DCHECK(seat->data()->mo_card_ != nullptr);
-                if (iter.first->getFace() == seat->data()->mo_card_->getFace())
+                if (iter.first->getFace() == seat->data()->mo_card_->getFace() &&
+                    iter.first->getType() == seat->data()->mo_card_->getType())
                 {
                     type = GGANG;
                     card = seat->data()->mo_card_;
@@ -855,19 +875,21 @@ void HzMajiangRoomImpl::OnGang(std::shared_ptr<Agent > player, assistx2::Stream 
 
 void HzMajiangRoomImpl::OnHu(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
-    if (active_player_ != now_operator_)
-    {
-        LOG(ERROR) << "OnHu:active_player_ != now_operator_ Failed roomid:=" 
-            << owner_->scene_id() << ",mid:=" << player->uid() ;
-        SendErrorCode(player, CLIENT_REQUEST_ONHU, -1);
-        return;
-    }
+    auto operation_id = packet->Read<std::string>();
 
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
 
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
     DCHECK(seat != nullptr);
+
+    if (operation_id != seat->data()->operation_id_)
+    {
+        LOG(ERROR) << "OnHu: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
+            << ",operation_id: -->" << operation_id << " != " << seat->data()->operation_id_;
+        //SendErrorCode(player, CLIENT_REQUEST_ONHU, -1);
+        return;
+    }
 
     if (!CheckOperation(seat, CardLogic::HUPAI_OPERA))
     {
@@ -924,19 +946,21 @@ void HzMajiangRoomImpl::OnHu(std::shared_ptr<Agent > player, assistx2::Stream * 
 }
 void HzMajiangRoomImpl::OnCancle(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
+    auto operation_id = packet->Read<std::string>();
+
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
 
-    if (now_operator_ != seatno)
-    {
-        LOG(ERROR) << "OnCancle: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
-            << ",now_operator_:=" << now_operator_ << " != seatno:=" << seatno;
-        SendErrorCode(player, CLIENT_REQUEST_ONCANCLE, -1);
-        return;
-    }
-
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
     DCHECK(seat != nullptr);
+
+    if (operation_id != seat->data()->operation_id_)
+    {
+        LOG(ERROR) << "OnCancle: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
+            << ",operation_id: -->" << operation_id << " != " << seat->data()->operation_id_;
+        //SendErrorCode(player, CLIENT_REQUEST_ONCANCLE, -1);
+        return;
+    }
 
     if (!CheckOperation(seat, CardLogic::CANCLE_OPERA))
     {
@@ -1363,16 +1387,13 @@ std::int32_t HzMajiangRoomImpl::GetZhongNiaoScore(std::int32_t seatno)
     {
         DCHECK(it->second.size() == 1);
         auto card = it->second[0];
-        if (card->getFace() == Card::Face::One ||
-            card->getFace() == Card::Face::Five ||
-            card->getFace() == Card::Face::Nine ||
-            card->getFace() == Card::Face::HongZ)
+        if (card->getFace() == Card::Face::HongZ)
         {
-            return 10;
+            return 12;
         }
         else
         {
-            return static_cast<std::int32_t>(card->getFace());
+            return (static_cast<std::int32_t>(card->getFace()) + 2);
         }
     }
 
@@ -1391,12 +1412,12 @@ void HzMajiangRoomImpl::ClearGameData()
     hu_card_ = nullptr;
     vec_niao_.clear();
     hu_type_ = PrivateRoom::HuType::CHOUZHUANG;
-    is_yi_ma_quan_zhong_ = false;
     auto& seats = owner_->table_obj()->GetSeats();
     for (auto iter : seats)
     {
         iter->data()->ClearNowGameData();
-        iter->set_seat_player_state(Seat::PLAYER_STATUS_WAITING);
+        auto state = ((iter->seat_player_state() & Seat::PLAYER_STATUS_NET_CLOSE) | Seat::PLAYER_STATUS_WAITING);
+        iter->set_seat_player_state(state);
     }
 }
 
@@ -1576,6 +1597,7 @@ void HzMajiangRoomImpl::RoomAccount()
             stream.Write(iter->data()->seat_score_);
         }
     }
+    stream.Write(owner_->RoomDataToString(false));
     stream.End();
 
     owner_->BroadCast(stream, nullptr, true);

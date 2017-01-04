@@ -88,7 +88,7 @@ void GameDataManager::OnGameStart(RoomBase* room)
         if (iter->player()->agent_type() == Agent::AgentType::PLAYER)
         {
             DataLayer::getInstance()->set_playing_player_to_cache(iter->player()->uid(), 
-                iter->player()->game_session());
+                pImpl_->watch_dog_->game_session());
         }
     }
 
@@ -96,7 +96,7 @@ void GameDataManager::OnGameStart(RoomBase* room)
 }
 
 void GameDataManager::OnOperation(RoomBase* room, std::int32_t seatno, 
-    CardLogic::OperationType operation, std::shared_ptr< Card >card)
+    CardLogic::OperationType operation, std::shared_ptr< Card >card, MingTangType type)
 {
     json_spirit::Array array;
     array.push_back(DATA_PLAY);
@@ -110,7 +110,7 @@ void GameDataManager::OnOperation(RoomBase* room, std::int32_t seatno,
     {
         array.push_back(card->getName());
     }
-    
+    array.push_back(static_cast<std::int32_t>(type));
     pImpl_->WriteRoomRecord(room->scene_id(), array);
 }
 
@@ -193,7 +193,7 @@ void GameDataManager::ResetRoomData(RoomBase* room)
 {
     std::string data;
     auto res = DataLayer::getInstance()->room_data_from_cache(
-        room->scene_id(), data);
+        room->room_index(), data);
     if (res == false)
     {
         return;
@@ -224,7 +224,7 @@ bool GameDataManager::UpdataRoomData(RoomBase* room)
 
     std::string data;
     auto res = DataLayer::getInstance()->room_data_from_cache(
-        room->scene_id(), data);
+        room->room_index(), data);
     if (res == false)
     {
         room->Disband();
@@ -427,13 +427,13 @@ void GameDataManagerImpl::ResetRoomPlayerData(RoomBase* room, const std::vector<
         auto player = watch_dog_->NewAgent(iter.mid);
         DCHECK(player != nullptr);
         player->set_seat_no(iter.seatno);
-        CHECK(room->Enter(player) > 0);
-        player->set_scene_object(room);
         auto seat = room->table_obj()->GetBySeatNo(iter.seatno);
         DCHECK(seat != nullptr);
         seat->data()->set_string_to_seat_data(iter.data);
         auto state = seat->seat_player_state() | Seat::PLAYER_STATUS_NET_CLOSE;
         seat->set_seat_player_state(state);
+        CHECK(room->Enter(player) > 0);
+        player->set_scene_object(room);
     }
 }
 

@@ -82,6 +82,7 @@ public:
     void AddZhongMaSeats(const std::int32_t seatno,const std::shared_ptr<Card> card);
     bool CanGang(const std::shared_ptr<Card> card);
     bool IsNoOperator();
+    void SetGuoCard(Seat* seat);
 public:
     void OnPlay(std::shared_ptr<Agent > player, assistx2::Stream * packet);
     void OnPeng(std::shared_ptr<Agent > player, assistx2::Stream * packet);
@@ -101,7 +102,7 @@ public:
     std::map<std::int32_t, std::vector<std::shared_ptr<Card>>> zhong_ma_seats_;
     std::shared_ptr<Card> hu_card_ = nullptr;//胡的牌
     std::int32_t room_operation_ = 0;//房间选项 1为庄闲 2七对胡 4红中癞子
-    std::vector<std::int32_t> zhama_value_{4,6,8};
+    std::vector<std::int32_t> zhama_value_{0,2,3,4,6,8};
     std::vector<std::shared_ptr<Card>> vec_niao_;
     PrivateRoom::HuType hu_type_ = PrivateRoom::HuType::CHOUZHUANG;
     time_t now_active_time_ = 0;
@@ -260,7 +261,8 @@ void ZhuanZhuanRoom::OnGameStart()
         DCHECK(iter->player() != nullptr);
         iter->player()->SendTo(package);
 
-        iter->set_seat_player_state(Seat::PLAYER_STATUS_PLAYING);
+        auto state = ((iter->seat_player_state() & Seat::PLAYER_STATUS_NET_CLOSE) | Seat::PLAYER_STATUS_PLAYING);
+        iter->set_seat_player_state(state);
 
         iter->data()->hand_cards_ = std::make_shared<CardGroup>(cards);
         iter->data()->start_playing_time_ = time(nullptr);
@@ -500,11 +502,6 @@ void ZhuanZhuanRoom::OnReConect(std::shared_ptr<Agent > player)
     }
 
     pImpl_->NotifyTableData(player);
-
-    for (auto iter : pImpl_->hu_message_)
-    {
-        player->SendTo(iter);
-    }
 }
 
 std::string ZhuanZhuanRoom::RoomDataToString(bool isContainTableData)
@@ -597,6 +594,12 @@ void ZhuanZhuanRoomImpl::BroadCastNextPlayer(std::int32_t seatno)
     active_player_ = seatno;
     now_active_time_ = time(nullptr);
 
+    DCHECK(seatno != Table::INVALID_SEAT);
+
+    auto seat = owner_->table_obj()->GetBySeatNo(seatno);
+    DCHECK(seat != nullptr);
+    seat->data()->guo_cards_.clear();
+
     assistx2::Stream package(SERVER_BROADCAST_NEXT_PLAYER);
     package.Write(seatno);
     package.End();
@@ -616,6 +619,9 @@ void ZhuanZhuanRoomImpl::NotifyOperation(std::int32_t seatno,
     DCHECK(seat->player() != nullptr);
 
     seat->data()->now_operate_ = operate;
+    std::stringstream ss;
+    ss << seat->player()->uid() << "_" << owner_->scene_id() << "_" << (rand() % 100000 + 1);
+    seat->data()->operation_id_ = ss.str();
 
     assistx2::Stream package(SERVER_NOTIFY_OPERATE);
     package.Write(seatno);
@@ -626,6 +632,7 @@ void ZhuanZhuanRoomImpl::NotifyOperation(std::int32_t seatno,
         DLOG(INFO) << "NotifyOperation: roomid:=" << owner_->scene_id() << 
             ",mid:=" << seat->player()->uid() << ",operate:=" << iter;
     }
+    package.Write(seat->data()->operation_id_);
     package.End();
 
     seat->player()->SendTo(package);   
@@ -633,19 +640,22 @@ void ZhuanZhuanRoomImpl::NotifyOperation(std::int32_t seatno,
 
 void ZhuanZhuanRoomImpl::OnPlay(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
-    if (active_player_ != now_operator_)
-    {
-        LOG(ERROR) << "OnPlay:active_player_ != now_operator_ Failed roomid:=" 
-            << owner_->scene_id() << ",mid:=" << player->uid();
-        SendErrorCode(player, CLIENT_REQUEST_ONPLAY, -1);
-        return;
-    }
+    auto card_name = packet->Read<std::string>();
+    auto operation_id = packet->Read<std::string>();
 
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
 
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
     DCHECK(seat != nullptr);
+
+    if (operation_id != seat->data()->operation_id_)
+    {
+        LOG(ERROR) << "OnPlay: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
+            << ",operation_id: -->" << operation_id << " != " << seat->data()->operation_id_;
+        //SendErrorCode(player, CLIENT_REQUEST_ONPLAY, -1);
+        return;
+    }
 
     if (!CheckOperation(seat, CardLogic::PLAY_OPERA))
     {
@@ -654,8 +664,7 @@ void ZhuanZhuanRoomImpl::OnPlay(std::shared_ptr<Agent > player, assistx2::Stream
         SendErrorCode(player, CLIENT_REQUEST_ONPLAY, -1);
         return;
     }
-   
-    auto card_name = packet->Read<std::string>();
+
     auto card = CardFactory::MakeMajiangCard(card_name);
     if (card == nullptr)
     {
@@ -691,19 +700,21 @@ void ZhuanZhuanRoomImpl::OnPlay(std::shared_ptr<Agent > player, assistx2::Stream
 
 void ZhuanZhuanRoomImpl::OnPeng(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
-    if (active_player_ == now_operator_)
-    {
-        LOG(ERROR) << "OnPeng:active_player_ == now_operator_ Failed roomid:=" 
-            << owner_->scene_id() << ",mid:=" << player->uid();
-        SendErrorCode(player, CLIENT_REQUEST_ONPENG, -1);
-        return;
-    }
+    auto operation_id = packet->Read<std::string>();
 
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
 
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
     DCHECK(seat != nullptr);
+
+    if (operation_id != seat->data()->operation_id_)
+    {
+        LOG(ERROR) << "OnPeng: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
+            << ",operation_id: -->" << operation_id << " != " << seat->data()->operation_id_;
+        //SendErrorCode(player, CLIENT_REQUEST_ONPENG, -1);
+        return;
+    }
 
     if (!CheckOperation(seat, CardLogic::PENG_OPERA))
     {
@@ -731,11 +742,22 @@ void ZhuanZhuanRoomImpl::OnPeng(std::shared_ptr<Agent > player, assistx2::Stream
 
 void ZhuanZhuanRoomImpl::OnGang(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
+    auto card_name = packet->Read<std::string>();
+    auto operation_id = packet->Read<std::string>();
+
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
 
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
     DCHECK(seat != nullptr);
+
+    if (operation_id != seat->data()->operation_id_)
+    {
+        LOG(ERROR) << "OnGang: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
+            << ",operation_id: -->" << operation_id << " != " << seat->data()->operation_id_;
+        //SendErrorCode(player, CLIENT_REQUEST_ONGANG, -1);
+        return;
+    }
 
     if (!CheckOperation(seat, CardLogic::GANG_OPERA))
     {
@@ -745,7 +767,6 @@ void ZhuanZhuanRoomImpl::OnGang(std::shared_ptr<Agent > player, assistx2::Stream
         return;
     }
 
-    auto card_name = packet->Read<std::string>();
     seat->data()->is_qianggang_hu_ = false;
     seat->data()->now_operate_.clear();
     RemoveHuPlayerOperation(seatno);
@@ -763,11 +784,21 @@ void ZhuanZhuanRoomImpl::OnGang(std::shared_ptr<Agent > player, assistx2::Stream
 
 void ZhuanZhuanRoomImpl::OnHu(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
+    auto operation_id = packet->Read<std::string>();
+
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
 
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
     DCHECK(seat != nullptr);
+
+    if (operation_id != seat->data()->operation_id_)
+    {
+        LOG(ERROR) << "OnHu: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
+            << ",operation_id: -->" << operation_id << " != " << seat->data()->operation_id_;
+        //SendErrorCode(player, CLIENT_REQUEST_ONHU, -1);
+        return;
+    }
 
     if (!CheckOperation(seat, CardLogic::HUPAI_OPERA))
     {
@@ -816,19 +847,21 @@ void ZhuanZhuanRoomImpl::OnHu(std::shared_ptr<Agent > player, assistx2::Stream *
 }
 void ZhuanZhuanRoomImpl::OnCancle(std::shared_ptr<Agent > player, assistx2::Stream * packet)
 {
+    auto operation_id = packet->Read<std::string>();
+
     auto seatno = player->seat_no();
     DCHECK(seatno != Table::INVALID_SEAT);
 
-//     if (now_operator_ != seatno)
-//     {
-//         DLOG(ERROR) << "OnCancle: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
-//             << ",now_operator_:=" << now_operator_ << " != seatno:=" << seatno;
-//         SendErrorCode(player, CLIENT_REQUEST_ONCANCLE, -1);
-//         return;
-//     }
-
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
     DCHECK(seat != nullptr);
+
+    if (operation_id != seat->data()->operation_id_)
+    {
+        LOG(ERROR) << "OnCancle: roomid:=" << owner_->scene_id() << ",mid:=" << player->uid()
+            << ",operation_id: -->" << operation_id << " != " << seat->data()->operation_id_;
+        //SendErrorCode(player, CLIENT_REQUEST_ONCANCLE, -1);
+        return;
+    }
 
     if (!CheckOperation(seat, CardLogic::CANCLE_OPERA))
     {
@@ -836,6 +869,11 @@ void ZhuanZhuanRoomImpl::OnCancle(std::shared_ptr<Agent > player, assistx2::Stre
             << ",mid:=" << player->uid() << ",operate:=" << CardLogic::CANCLE_OPERA;
         SendErrorCode(player, CLIENT_REQUEST_ONCANCLE, -1);
         return;
+    }
+
+    if (CheckOperation(seat,CardLogic::HUPAI_OPERA) == true)
+    {
+        SetGuoCard(seat);
     }
 
     SendErrorCode(player, CLIENT_REQUEST_ONCANCLE, 0);
@@ -1029,6 +1067,10 @@ bool ZhuanZhuanRoomImpl::FindGongGang(Seat* seat, std::shared_ptr<Card> card)
 
 bool ZhuanZhuanRoomImpl::FindQiangGangHu(std::int32_t seatno, std::shared_ptr<Card> card)
 {
+    if (play_type_ == TYPE_ZIMO_HU)
+    {
+        return false;
+    }
     auto hu_count = 0;
     auto& seats = owner_->table_obj()->GetSeats();
     for (auto iter : seats)
@@ -1244,7 +1286,8 @@ void ZhuanZhuanRoomImpl::ClearGameData()
     for (auto iter : seats)
     {
         iter->data()->ClearNowGameData();
-        iter->set_seat_player_state(Seat::PLAYER_STATUS_WAITING);
+        auto state = ((iter->seat_player_state() & Seat::PLAYER_STATUS_NET_CLOSE) | Seat::PLAYER_STATUS_WAITING);
+        iter->set_seat_player_state(state);
     }
 }
 
@@ -1336,6 +1379,11 @@ void ZhuanZhuanRoomImpl::NotifyTableData(std::shared_ptr<Agent > player)
 
     player->SendTo(stream);
 
+    for (auto iter : hu_message_)
+    {
+        player->SendTo(iter);
+    }
+
     if (seat->data()->now_operate_.size() != 0)
     {
         NotifyOperation(seatno, seat->data()->now_operate_);
@@ -1344,6 +1392,17 @@ void ZhuanZhuanRoomImpl::NotifyTableData(std::shared_ptr<Agent > player)
 
 bool ZhuanZhuanRoomImpl::CheckHu(const std::shared_ptr<Card> card, Seat* seat)
 {
+    if (card != nullptr)
+    {
+        for (auto iter : seat->data()->guo_cards_)
+        {
+            if (card->getFace() == iter->getFace() &&
+                card->getType() == iter->getType())
+            {
+                return false;
+            }
+        }
+    }
     auto res = card_logic_->CheckHu(card, seat->data()->hand_cards_);
     if (((room_operation_ & 0x02) == 0x02) && res == false)
     {
@@ -1401,6 +1460,7 @@ void ZhuanZhuanRoomImpl::RoomAccount()
             stream.Write(iter->data()->seat_score_);
         }
     }
+    stream.Write(owner_->RoomDataToString(false));
     stream.End();
 
     owner_->BroadCast(stream, nullptr, true);
@@ -1565,7 +1625,8 @@ void ZhuanZhuanRoomImpl::DoGang(Seat* seat, std::string card_name)
                     continue;
                 }
                 DCHECK(seat->data()->mo_card_ != nullptr);
-                if (iter.first->getFace() == seat->data()->mo_card_->getFace())
+                if (iter.first->getFace() == seat->data()->mo_card_->getFace() &&
+                     iter.first->getType() == seat->data()->mo_card_->getType())
                 {
                     type = GGANG;
                     card = seat->data()->mo_card_;
@@ -1696,6 +1757,10 @@ void ZhuanZhuanRoomImpl::DoGongGang(Seat* seat, std::string card_name)
     owner_->BroadCast(stream);
 
     GameDataManager::getInstance()->OnOperation(owner_, seatno, CardLogic::GANG_OPERA, card);
+
+    BroadCastNextPlayer(seatno);
+
+    owner_->NewTimer(1, SceneTimerContext::MAJIANG_MOPAI, seat);
 }
 
 void ZhuanZhuanRoomImpl::DoZiMoHu(Seat* seat, std::string card_name)
@@ -1807,4 +1872,16 @@ bool ZhuanZhuanRoomImpl::IsNoOperator()
     }
 
     return true;
+}
+
+void ZhuanZhuanRoomImpl::SetGuoCard(Seat* seat)
+{
+    if (seat->seat_no() == active_player_)
+    {
+        return;
+    }
+    auto dianpaoseat = owner_->table_obj()->GetBySeatNo(now_played_seatno_);
+    DCHECK(dianpaoseat != nullptr);
+    auto card = dianpaoseat->data()->played_cards_.top();
+    seat->data()->guo_cards_.push_back(card);
 }

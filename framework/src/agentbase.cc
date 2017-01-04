@@ -18,6 +18,7 @@ public:
     WatchDog* wathc_dog_ = nullptr;
     bool connect_status_ = false;
     std::int32_t seat_no_ = 0;
+    std::string gps_;
 };
 
 AgentBase::AgentBase(const AgentType type):
@@ -136,6 +137,16 @@ void AgentBase::set_seat_no(const std::int32_t seatno)
 const std::int32_t AgentBase::seat_no() const
 {
     return pImpl_->seat_no_;
+}
+
+void AgentBase::set_gps(const std::string str)
+{
+    pImpl_->gps_ = str;
+}
+
+const std::string AgentBase::gps() const
+{
+    return pImpl_->gps_;
 }
 
 AgentBaseImpl::AgentBaseImpl()

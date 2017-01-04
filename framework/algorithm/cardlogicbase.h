@@ -18,9 +18,12 @@ public:
         const std::shared_ptr<CardGroup> cardgroup);
     virtual bool CheckHu(const std::shared_ptr<Card> card,
         const std::shared_ptr<CardGroup> cardgroup) ;
+    virtual bool CheckHu_258(const std::shared_ptr<Card> /**/,
+        const std::shared_ptr<CardGroup> /**/);
     virtual bool CheckHu7Dui(const std::shared_ptr<Card> card,
         const std::shared_ptr<CardGroup> cardgroup);
     virtual bool CheckTing(const std::shared_ptr<CardGroup> cardgroup);
+    virtual bool CheckTing_258(const std::shared_ptr<CardGroup> cardgroup);
     virtual bool CheckTing7Dui(const std::shared_ptr<CardGroup> cardgroup);
 protected:
     virtual void ChangeCardToArray(const std::shared_ptr<Card> card,
@@ -28,6 +31,8 @@ protected:
     bool IsHu();
     bool IsTing(std::int32_t need_card = 1);
     bool is7Dui(std::int32_t hz_card = 0);
+    bool IsHu_258();
+    bool IsTing_258(std::int32_t need_card = 1);
 public:
     std::int32_t cards_array[3][10] = {
         { 0,0,0,0,0,0,0,0,0,0 },               //Ͳ 

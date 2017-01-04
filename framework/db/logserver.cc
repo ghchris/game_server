@@ -11,8 +11,10 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <assistx2/string_wrapper.h>
 #include "gamedatamanager.h"
 #include "timerhelper.h"
+#include "gameconfigdata.h"
 
 static const std::int16_t XLOGGER_GOLD_RECORD = 9032;
 const static std::int16_t XLOGGER_ROOM_RECORD = 9033;
@@ -162,6 +164,9 @@ void LogServer::WriteGameLog(PrivateRoom* room, std::int32_t played_num)
     {
         stream.Write(room->proxy_uid());
     }
+    auto type = assistx2::atoi_s(room->room_conifg_data()->type);
+    stream.Write(type);
+    stream.Write(room->room_conifg_data()->cost);
     
     stream.End();
 

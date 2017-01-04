@@ -101,7 +101,9 @@ void CardGenerator::MakeHongZhongCard()
                 auto card = CardFactory::MakeMajiangCard(static_cast<Card::Face>(f), static_cast<Card::Type>(t));
                 cards_.push_back(card);
             }
+            std::random_shuffle(cards_.begin(), cards_.end());
         }
+        std::random_shuffle(cards_.begin(), cards_.end());
 
         auto card = CardFactory::MakeMajiangCard(static_cast<Card::Face>(Card::HongZ), static_cast<Card::Type>(Card::Zi));
         cards_.push_back(card);
@@ -144,18 +146,53 @@ void CardGenerator::MakeGeneralCard()
                 auto card = CardFactory::MakeMajiangCard(static_cast<Card::Face>(f), static_cast<Card::Type>(t));
                 cards_.push_back(card);
             }
+            std::random_shuffle(cards_.begin(), cards_.end());
         }
+        std::random_shuffle(cards_.begin(), cards_.end());
     }
 }
 
 void CardGenerator::MakeTestCard()
 {
+    std::vector<std::string> cards = {
+        "7W","7W","7W","9W","9W","9W","9W","8W","8W","4W","5W","6W","4W","2W",
+        "4W","5W","2S","2S","2S","7S","8S","9S","2T","1T","3T","8T","8T",
+        "6W","6W","6W","1T","8S","5T","6S","6S","6T","2T","3W","1S","1T",
+        "1W","1W","1W","7T","6T","5T","6S","4S","5S","3T","2T","5W","5W",
+        "3W","1T","2S","7S","3T","7W","9S","9S","3W",
+        "4T","1S","4T","4S","8W","5S",
+        "9T","3T","2T","7T",
+        "4W","7S","9S","1S","3S",
+        "4S","8W","9T","4S","5T","4T","8T","8T","5S","6S",
+        "9T","3S","7S","3S","7T","2W",
+        "3S","7T","8S",
+        "6T","4T","5S",
+        "8S",
+        "5T","2W","9T","1S","1W","2W",
+    };
+
 //     std::vector<std::string> cards = {
-//         "HZ","HZ","HZ","HZ","7W","7W","7W","9W","9W","9W","9W""9S","9S","5S","6S","1T","4W","5W","6W",
+//         "7W","7W","7W","9W","9W","9W","9W","8T","8T","5S","6S","4W","5W","6W",
 //         "6W","6W","6W","1T","1T","8S","6S","6S","6T","2T","3W","1S","1T",
 //         "3W","4W","5W","2S","2S","2S","7S","8S","9S","2T","3T","8T","8T",
 //         "1W","1W","1W","7T","6T","5T","6S","4S","5S","3T","2T","5W","5W",
-//         "2S","7S","2W","3W","4W","3T","8T","8T","7W",
+//         "1T","2S","7S","2W","3W","4W","3T","7W","9S","9S",
+//         "4T","1S","4T","4S","8W","5S","5T",
+//         "8W","9T","3T","2T","7T",
+//         "4W","7S","9S","1S","3S",
+//         "4S","8W","9T","4S","5T","8W","4T",
+//         "9T","3S","7S","3S","7T","2W",
+//         "3S","7T","8S",
+//         "6T","4T","5S",
+//         "8S",
+//         "5T","2W","9T","1S","1W","2W",
+//     };
+//     std::vector<std::string> cards = {
+//         "7W","7W","7W","7W","9W","9W","9W","9W""9S","9S","5S","6S","1T","4W","5W","6W",
+//         "6W","6W","6W","1T","1T","8S","6S","6S","6T","2T","3W","1S","1T",
+//         "3W","4W","5W","2S","2S","2S","7S","8S","9S","2T","3T","8T","8T",
+//         "1W","1W","1W","7T","6T","5T","6S","4S","5S","3T","2T","5W","5W",
+//         "2S","7S","2W","3W","4W","3T","8T","8T",
 //         "4T","1S","4T","4S","8W","5S","5T",
 //         "8W","9T","3T","2T","7T",
 //         "4W","7S","9S","1S","3S",
@@ -184,11 +221,28 @@ void CardGenerator::MakeTestCard()
 //         "5T","2W","9T","1S","1W","2W","HZ","HZ","HZ",
 //     };
 //     std::vector<std::string> cards = {
-//         "4W","5W","6W","7W","7W","7W","9W","9W","9W","9S","9S","5S","6S","1T",
-//         "6W","6W","6W","1T","1T","8S","6S","6S","6T","2T","3W","1S","1T",
-//         "3W","4W","5W","2S","2S","2S","7S","8S","9S","2T","3T","8T","8T",
-//         "1W","1W","1W","7T","6T","5T","6S","4S","5S","3T","2T","5W","5W",
-//         "2S","7S","2W","3W","4W","3T","8T","8T","7W","9W"
+//         "4W","5W","6W","7W","7W","7W","9W","9W","9W","8S","8S","5S","6S","4T",
+//         "6W","6W","6W","1T","1T","8S","6S","6S","6T","2T","3W","1S","4S",
+//         "3W","4W","5W","2S","2S","2S","7S","8S","9S","2T","3T","8W","1T",
+//         "1W","1W","1W","7T","6T","5T","6S","4S","5S","3T","2T","4S","5T",
+//         "7W","8W","4S","2S","7S","2W","3W","4W","3T","8T","8T",
+//         "4T","1S","4T","5S","5T","1T","9W",
+//         "8W","9T","3T","2T","7T","8T","8T",
+//         "4W","7S","9S","1S","3S","5W","5W",
+//         "8W","9T",
+//         "9T","3S","7S","3S","7T","2W",
+//         "3S","7T","9S",
+//         "6T","4T","5S",
+//         "9S",
+//         "5T","2W","9T","1S","1W","2W","HZ","HZ","HZ","HZ",
+//     };
+//     std::vector<std::string> cards = {
+//         "9T","8T","2T","9W","1W","9S","7S","6S","4S","4W","5W","6W","7W","7W",
+//         "7W","9W","9W","9W","9S","9S","5S","6S","1T","6W","6W","6W","5W","1T",
+//         "5W","1T","8S","6S","6S","6T","2T","3W","1S","1T",
+//         "3W","4W","2S","2S","2S","7S","8S","9S","2T","3T","8T","8T",
+//         "1W","1W","1W","7T","6T","5T","6S","4S","5S","3T","2T","5W",
+//         "2S","7S","2W","3W","4W","3T","8T","8T","7W","9W",
 //         "4T","1S","4T","4S","8W","5S","5T",
 //         "8W","9T","3T","2T","7T",
 //         "4W","7S","9S","1S","3S",
@@ -199,23 +253,11 @@ void CardGenerator::MakeTestCard()
 //         "8S",
 //         "5T","2W","9T","1S","1W","2W","HZ","HZ","HZ","HZ",
 //     };
-    std::vector<std::string> cards = {
-        "9T","8T","2T","9W","1W","9S","7S","6S","4S","HZ","HZ","HZ",
-        "4W","5W","6W","7W","7W","7W","9W","9W","9W","9S","9S","5S","6S","1T",
-        "6W","6W","6W","1T","1T","8S","6S","6S","6T","2T","3W","1S","1T",
-        "3W","4W","5W","2S","2S","2S","7S","8S","9S","2T","3T","8T","8T",
-        "1W","1W","1W","7T","6T","5T","6S","4S","5S","3T","2T","5W","5W",
-        "2S","7S","2W","3W","4W","3T","8T","8T","7W","9W"
-        "4T","1S","4T","4S","8W","5S","5T",
-        "8W","9T","3T","2T","7T",
-        "4W","7S","9S","1S","3S",
-        "4S","8W","9T","4S","5T","8W","4T",
-        "9T","3S","7S","3S","7T","2W",
-        "3S","7T","8S",
-        "6T","4T","5S",
-        "8S",
-        "5T","2W","9T","1S","1W","2W","HZ","HZ","HZ","HZ",
-    };
+//     std::vector<std::string> cards = {
+//         "9T","9T","9T","3T","4T","5T","5W","5W","9T","7T","1S","3S","3S","3S",
+//         "6W","3S","8W","2W","7S","8S","4W","7W","5T","4W","9S","1T","7W",
+//         "6T","8T"
+//     };
     cards_.clear();
     for (auto iter = cards.rbegin(); iter != cards.rend(); iter++)
     {

@@ -43,6 +43,9 @@ public:
 
     virtual void set_seat_no(const std::int32_t seatno);
     virtual const std::int32_t seat_no() const;
+
+    virtual void set_gps(const std::string);
+    virtual const std::string gps() const;
 private:
     DISALLOW_COPY_AND_ASSIGN(AgentBase);
 private:

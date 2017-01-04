@@ -9,6 +9,7 @@
 #include "watchdog.h"
 #include "scenemanager.h"
 #include <assistx2/tcphandler_wrapper.h>
+#include <json_spirit_writer_template.h>
 #include <assistx2/json_wrapper.h>
 #include "gameconfigdata.h"
 #include "cardgenerator.h"
@@ -177,6 +178,7 @@ std::int32_t PrivateRoom::Enter(std::shared_ptr<Agent > player)
     if (reconnect ==  false)
     {
         pImpl_->BroadCastOnEnterPlayer(player);
+        pImpl_->OnReady(player);
     }
     else
     {
@@ -193,6 +195,8 @@ std::int32_t PrivateRoom::Leave(std::shared_ptr<Agent > player)
     table_obj()->Leave(player);
 
     RoomBase::Leave(player);
+
+    DataLayer::getInstance()->remove_playing_player_from_cache(player->uid());
 
     if (player->connect_status() == false)
     {
@@ -255,14 +259,14 @@ void PrivateRoom::OnGameStart()
 {
     set_room_state(RoomBase::RoomState::PLAYING);
     DataLayer::getInstance()->set_room_data_to_cache(
-        scene_id(), RoomDataToString(true));
+        room_index(), RoomDataToString(true));
 }
 
 void PrivateRoom::OnGameOver()
 {
     set_room_state(RoomBase::RoomState::WAITING);
     DataLayer::getInstance()->set_room_data_to_cache(
-        scene_id(), RoomDataToString(true));
+        room_index(), RoomDataToString(true));
 
     if (pImpl_->played_num_ >= room_conifg_data()->ju)
     {
@@ -300,7 +304,7 @@ void PrivateRoom::OnDisbandRoom(DisbandType type)
     pImpl_->msg_list_.clear();
     set_room_owner(0);
     SceneManager::getInstance()->DetachActivedPrivateRoom(this);
-    DataLayer::getInstance()->set_room_data_to_cache(scene_id(), std::string());
+    DataLayer::getInstance()->set_room_data_to_cache(room_index(), std::string());
 }
 
 std::int32_t PrivateRoom::Disband()
@@ -319,6 +323,7 @@ std::int32_t PrivateRoom::Disband()
     pImpl_->msg_list_.clear();
     set_room_owner(0);
     SceneManager::getInstance()->DetachActivedPrivateRoom(this);
+    DataLayer::getInstance()->set_room_data_to_cache(room_index(), std::string());
 
     return RoomBase::Disband();
 }
@@ -413,6 +418,7 @@ void PrivateRoomImpl::RoomSnapShot(std::shared_ptr<Agent > player)
     packet.Write(static_cast<std::int32_t>(players.size()));
     for (auto iter : players)
     {
+        json_spirit::Array json;
         auto member_fides = iter.second->member_fides();
         packet.Write(iter.second->seat_no());
         packet.Write(iter.second->ip_addr());
@@ -422,11 +428,13 @@ void PrivateRoomImpl::RoomSnapShot(std::shared_ptr<Agent > player)
         packet.Write(member_fides->name());
         packet.Write(member_fides->icon());
         packet.Write(member_fides->city());
-        packet.Write(std::string("")); //ռλ
-//         DLOG(INFO) << "RoomSnapShot roomid:=" << owner_->scene_id() << ",mid:=" 
-//             << iter.second->uid() << ", seatno:=" << iter.second->seat_no() << ", gp:=" 
-//             << member_fides->gp() << ", sex:=" << member_fides->sex() << ", name:=" 
-//             << member_fides->name()<< ", icon:=" << member_fides->icon();
+
+        json.push_back(iter.second->gps());
+        packet.Write(json_spirit::write_string(json_spirit::Value(json))); //ռλ
+//          DLOG(INFO) << "RoomSnapShot roomid:=" << owner_->scene_id() << ",mid:=" 
+//              << iter.second->uid() << ", seatno:=" << iter.second->seat_no() << ", gp:=" 
+//              << member_fides->gp() << ", sex:=" << member_fides->sex() << ", name:=" 
+//              << member_fides->name()<< ", icon:=" << member_fides->icon() << ",gps:=" << iter.second->gps();
     }
     packet.Write(banker_seatno_);
     auto& seats = owner_->table_obj()->GetSeats();
@@ -469,6 +477,7 @@ void PrivateRoomImpl::BroadCastOnEnterPlayer(std::shared_ptr<Agent > player)
 {
     auto member_fides = player->member_fides();
 
+    json_spirit::Array json;
     assistx2::Stream packet(SERVER_BROADCAST_PLAYER_INFO);
     packet.Write(player->seat_no());
     packet.Write(player->ip_addr());
@@ -478,7 +487,9 @@ void PrivateRoomImpl::BroadCastOnEnterPlayer(std::shared_ptr<Agent > player)
     packet.Write(member_fides->name());
     packet.Write(member_fides->icon());
     packet.Write(member_fides->city());
-    packet.Write(std::string("")); //ռλ
+
+    json.push_back(player->gps());
+    packet.Write(json_spirit::write_string(json_spirit::Value(json))); //ռλ
 
     auto seat_obj = owner_->table_obj()->GetBySeatNo(player->seat_no());
     packet.Write(seat_obj->data()->seat_score_);
@@ -540,7 +551,7 @@ void PrivateRoomImpl::OnReady(std::shared_ptr<Agent > player)
     DCHECK(seatno != Table::INVALID_SEAT);
 
     auto seat = owner_->table_obj()->GetBySeatNo(seatno);
-    auto state = Seat::PLAYER_STATUS_READY;
+    auto state = ((seat->seat_player_state() & Seat::PLAYER_STATUS_NET_CLOSE) | Seat::PLAYER_STATUS_READY);
     seat->set_seat_player_state(state);
 
     assistx2::Stream package(CLIENT_READY_CMD);
@@ -668,7 +679,7 @@ void PrivateRoomImpl::OnVote(std::shared_ptr<Agent > player, assistx2::Stream* p
         }
     }
 
-    if (vote_count_true >= static_cast<std::int32_t>(seats.size() - 1))
+    if (vote_count_true >= static_cast<std::int32_t>(seats.size() - 2))
     {
         ClearVoteData();
         owner_->OnDisbandRoom(PrivateRoom::DisbandType::ALL_AGREE);
@@ -677,6 +688,7 @@ void PrivateRoomImpl::OnVote(std::shared_ptr<Agent > player, assistx2::Stream* p
 
 void PrivateRoomImpl::StartGame()
 {
+    size_t net_close_players = 0;
     auto& seats = owner_->table_obj()->GetSeats();
     for (auto iter : seats)
     {
@@ -684,11 +696,23 @@ void PrivateRoomImpl::StartGame()
         {
             return;
         }
-        if (iter->seat_player_state() !=
+//         if (iter->seat_player_state() !=
+//             Seat::PLAYER_STATUS_READY)
+        if ( (iter->seat_player_state() & Seat::PLAYER_STATUS_READY) != 
             Seat::PLAYER_STATUS_READY)
         {
             return;
         }
+        if ((iter->seat_player_state() & Seat::PLAYER_STATUS_NET_CLOSE) ==
+            Seat::PLAYER_STATUS_NET_CLOSE)
+        {
+            net_close_players += 1;
+        }
+    }
+
+    if (net_close_players == seats.size())
+    {
+        return;
     }
 
     played_num_ += 1;

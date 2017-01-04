@@ -229,6 +229,30 @@ bool DataLayer::proxy_mid(const uid_type mid, std::string& data)
     }
 }
 
+bool DataLayer::player_ip_addr(const uid_type mid, std::string& data)
+{
+    std::stringstream key;
+    key << "IP" << mid;
+
+    if (pImpl_->memcached_client_->get(key.str(), data) == true)
+    {
+        if (data.empty())
+        {
+            pImpl_->memcached_client_->remove(key.str());
+            return false;
+        }
+        else
+        {
+            DLOG(INFO) << "player_ip_addr:" << key.str() << ", " << data;
+            return true;
+        }
+    }
+    else
+    {
+        return false;
+    }
+}
+
 std::int32_t DataLayer::membercommongame(uid_type mid, MemberCommonGame& info, 
     bool forcedflush )
 {

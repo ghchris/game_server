@@ -18,6 +18,7 @@
 #include "memberfides.pb.h"
 #include "roombase.h"
 #include "gamedatamanager.h"
+#include "datalayer.h"
 
 //ÓÃ»§µÇÂ¼
 const static std::int16_t CLIENT_REQUEST_LOGIN = 1000;
@@ -52,6 +53,7 @@ public:
     std::string run_id_;
     std::shared_ptr<assistx2::TcpHanlderWrapper> gateway_connector_;
     std::map<uid_type, std::shared_ptr<Agent>> players_agent_;
+    std::int32_t game_session_ = 0;
 };
 
 WatchDog::WatchDog(boost::asio::io_service & ios):
@@ -139,6 +141,7 @@ std::shared_ptr<Agent> WatchDog::NewAgent(uid_type uid)
     player->set_watch_dog(this);
     player->set_connect_status(false);
     player->set_scene_object(nullptr);
+    player->set_game_session(pImpl_->game_session_);
 
     return player;
 }
@@ -152,6 +155,11 @@ std::shared_ptr<Agent> WatchDog::GetAgentByID(uid_type uid)
     }
 
     return nullptr;
+}
+
+const std::int32_t WatchDog::game_session() const
+{
+    return pImpl_->game_session_;
 }
 
 WatchDogImpl::WatchDogImpl(WatchDog* owner, boost::asio::io_service & ios):
@@ -251,11 +259,16 @@ std::int32_t WatchDogImpl::OnClose(assistx2::TcpHandler * handler, assistx2::Err
 
 void WatchDogImpl::OnRegister(assistx2::Stream * packet)
 {
-    const boost::int32_t err = packet->Read<boost::int32_t>();
+    const auto err = packet->Read<std::int32_t>();
+    game_session_ = packet->Read<std::int32_t>();
     if (err != 0)
     {
         LOG(ERROR) << "RunFastGameMgr::OnMessage.  REGISTER FAILED. err:=" << err;
         io_service_.stop();
+    }
+    else
+    {
+        LOG(INFO) << "RunFastGameMgr::OnMessage.  game_session_:=" << game_session_;
     }
 }
 
@@ -264,7 +277,8 @@ void WatchDogImpl::OnLogin(assistx2::Stream * packet)
     const uid_type mid = packet->Read<std::int32_t>();
     const std::int32_t login_source = packet->Read<std::int32_t>();
     const std::int32_t game_session = packet->Read<std::int32_t>();
-    const std::string ip_addr = packet->Read<std::string>();
+    std::string ip_addr;
+    DataLayer::getInstance()->player_ip_addr(mid, ip_addr);
 
     DLOG(INFO) << "WatchDogImpl::OnLogin mid:=" << mid << " login_source:=" 
         << login_source << " game_session:=" << game_session << " ip_addr:=" << ip_addr;
@@ -360,7 +374,7 @@ void WatchDogImpl::OnAdminOperation(std::int32_t op)
     {
         g_server_stopped = true;
         GlobalTimerProxy::getInstance()->NewTimer(
-            std::bind(&WatchDogImpl::CloseServer, this), 180);
+            std::bind(&WatchDogImpl::CloseServer, this), 60*60);
     }
 }
 

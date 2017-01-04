@@ -27,6 +27,8 @@ public:
     void RemoveAgent(uid_type uid);
     std::shared_ptr<Agent> NewAgent(uid_type uid);
     std::shared_ptr<Agent> GetAgentByID(uid_type uid);
+
+    const std::int32_t game_session() const;
 private:
     DISALLOW_COPY_AND_ASSIGN(WatchDog);
 private:
